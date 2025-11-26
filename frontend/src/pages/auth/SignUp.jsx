@@ -11,21 +11,23 @@ export default function SignUp() {
 
   return (
     <AuthLayout
-      top={
-        <button onClick={() => navigate(-1)} className="text-3xl mb-4">
-          ←
-        </button>
-      }
+          top={
+            <div className="w-full flex justify-start">
+              <button onClick={() => navigate(-1)} className="text-3xl mb-4">
+                ←
+              </button>
+            </div>
+          }
       bottom={
         <div className="flex flex-col w-full gap-6">
           {/* 이메일 */}
           <div>
-            <label className="block mb-1 text-sm font-semibold">이메일</label>
-            <div className="flex items-center border border-[#D9673C] rounded-xl px-4 py-3 gap-2">
+            <label className="block mb-1 text-sm font-semibold text-left w-full">이메일</label>
+            <div className="flex items-center border border-[#D9673C] bg-[#E7E9EB] rounded-xl px-4 py-3 gap-2">
               <span className="text-[#D9673C]">@</span>
               <input
                 type="email"
-                className="flex-1 outline-none"
+                className="flex-1 outline-none bg-transparent text-[#D9673C]"
                 placeholder="abc@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -35,12 +37,12 @@ export default function SignUp() {
 
           {/* 이름 */}
           <div>
-            <label className="block mb-1 text-sm font-semibold">이름</label>
-            <div className="flex items-center border border-[#D9673C] rounded-xl px-4 py-3 gap-2">
+            <label className="block mb-1 text-sm font-semibold text-left w-full">이름</label>
+            <div className="flex items-center border border-[#D9673C] bg-[#E7E9EB] rounded-xl px-4 py-3 gap-2">
               <span className="text-[#D9673C]">👤</span>
               <input
                 type="text"
-                className="flex-1 outline-none"
+                className="flex-1 outline-none bg-transparent text-[#D9673C]"
                 placeholder="홍길동"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -50,12 +52,12 @@ export default function SignUp() {
 
           {/* 비밀번호 */}
           <div>
-            <label className="block mb-1 text-sm font-semibold">비밀번호</label>
-            <div className="flex items-center border border-[#D9673C] rounded-xl px-4 py-3 gap-2">
+            <label className="block mb-1 text-sm font-semibold text-left w-full">비밀번호</label>
+            <div className="flex items-center border border-[#D9673C] bg-[#E7E9EB] rounded-xl px-4 py-3 gap-2">
               <span className="text-[#D9673C]">🔒</span>
               <input
                 type="password"
-                className="flex-1 outline-none"
+                className="flex-1 outline-none bg-transparent text-[#D9673C]"
                 placeholder="비밀번호"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
