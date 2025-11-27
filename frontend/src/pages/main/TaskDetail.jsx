@@ -6,6 +6,8 @@ import MainLayout from "../../components/layout/MainLayout";
 import StarRating from "../../components/ui/StarRating";
 import CompletionItem from '../../components/ui/TaskDone';
 import TaskEvaluation from '../../components/ui/TaskEvaluation';
+import Vcharacter from "../../assets/images/Vaccum_Character.png";
+
 
 export default function TaskDetail() {
   const { taskId } = useParams();
@@ -109,8 +111,11 @@ export default function TaskDetail() {
       <div style={{ padding: 0 }}>
         {/* top banner */}
         <div style={{ background: '#DF6437', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src={'/Splash-Charachter.png'} alt="character" style={{ width: 140, height: 140, objectFit: 'contain' }} />
-        </div>
+<img
+              src={Vcharacter}
+              alt="Vcharacter"
+              style={{ width: '100%', height: '100%', objectFit: "contain", filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))' }}
+            />        </div>
 
         {/* sheet */}
         <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}>
@@ -157,7 +162,9 @@ export default function TaskDetail() {
 
           <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
             <button onClick={() => navigate(-1)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>돌아가기</button>
-            <button onClick={() => alert('완료 처리 (모킹)')} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>완료하기</button>
+            {task?.status !== 'completed' && (
+              <button onClick={() => alert('완료 처리 (모킹)')} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>완료하기</button>
+            )}
           </div>
         </div>
       </div>
