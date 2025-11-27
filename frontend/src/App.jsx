@@ -8,6 +8,7 @@ import AuthLanding from "./pages/auth/AuthLanding";
 import Splash from "./pages/auth/Splash";
 import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
+import Dashboard from './pages/main/Dashboard';
 
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
       <Route path="/auth" element={<AuthLanding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/main/dashboard" element={<Dashboard />} />
     </Routes>
   )
 }
