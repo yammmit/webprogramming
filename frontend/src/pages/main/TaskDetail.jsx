@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance, { USE_MOCK } from "../../api/axiosInstance";
-import { db } from "../../mocks/db";
+import { db, counters } from "../../mocks/db";
 import MainLayout from "../../components/layout/MainLayout";
 import StarRating from "../../components/ui/StarRating";
 import CompletionItem from '../../components/ui/TaskDone';
@@ -18,6 +18,18 @@ export default function TaskDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [taskEvaluations, setTaskEvaluations] = useState([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+
+  // resolve current user id from localStorage
+  let storedUserLocal = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) storedUserLocal = JSON.parse(raw);
+    } catch (e) {}
+  }
+  const currentUserId = (storedUserLocal && storedUserLocal.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
 
   useEffect(() => {
     async function load() {
@@ -111,11 +123,12 @@ export default function TaskDetail() {
       <div style={{ padding: 0 }}>
         {/* top banner */}
         <div style={{ background: '#DF6437', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-<img
-              src={Vcharacter}
-              alt="Vcharacter"
-              style={{ width: '100%', height: '100%', objectFit: "contain", filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))' }}
-            />        </div>
+          <img
+            src={Vcharacter}
+            alt="Vcharacter"
+            style={{ width: '100%', height: '100%', objectFit: "contain", filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))' }}
+          />
+        </div>
 
         {/* sheet */}
         <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}>
@@ -163,9 +176,58 @@ export default function TaskDetail() {
           <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
             <button onClick={() => navigate(-1)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>돌아가기</button>
             {task?.status !== 'completed' && (
-              <button onClick={() => alert('완료 처리 (모킹)')} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>완료하기</button>
+              <button onClick={() => setShowConfirm(true)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>완료하기</button>
             )}
           </div>
+
+          {/* Confirm modal */}
+          {showConfirm && (
+            <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', zIndex: 1200 }}>
+              <div style={{ width: '90%', maxWidth: 420, background: '#fff', borderRadius: 12, padding: 18 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>정말 완료하시겠어요?</div>
+                <div style={{ color: '#666', marginBottom: 16 }}>집안일을 완료 처리하면 작업이 완료 상태로 변경됩니다.</div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setShowConfirm(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff' }}>취소</button>
+                  <button onClick={async () => {
+                    // mark as completed in mock DB
+                    try {
+                      // update mock db task status
+                      const dbTask = db.tasks.find((x) => String(x.task_id) === String(taskId));
+                      if (dbTask) dbTask.status = 'completed';
+
+                      // add completion history entry
+                      const newCompletionId = counters.completionId++;
+                      const newAssignmentId = counters.assignmentId++;
+                      db.taskHistory.push({ task_completion_id: newCompletionId, assignment_id: newAssignmentId, task_id: Number(taskId), completed_at: new Date().toISOString(), completed_by: currentUserId || null });
+
+                      // set local state
+                      setTask(prev => ({ ...prev, status: 'completed' }));
+                      setHistory([]);
+                    } catch (e) {
+                      console.error('mock update failed', e);
+                    }
+                    setShowConfirm(false);
+                    setShowShare(true);
+                  }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#DF6437', color: '#fff' }}>완료</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Share modal */}
+          {showShare && (
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1300, background: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 18, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>짝짝짝!</div>
+              <div style={{ fontSize: 16, marginBottom: 6 }}><strong>{task.title}</strong>를 완료했습니다.</div>
+              <div style={{ color: '#666', marginBottom: 12 }}>룸메이트들에게 공유할까요?</div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button style={{ width: 56, height: 56, borderRadius: 10, border: '1px solid #DF6437', background: '#fff' }}>📷</button>
+                <button onClick={() => { setShowShare(false); navigate('/main/dashboard'); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: '1px solid #DF6437', background: '#fff', color: '#DF6437' }}>메인으로</button>
+                <button onClick={() => { alert('공유되었습니다!'); setShowShare(false); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: 'none', background: '#DF6437', color: '#fff' }}>공유하기</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

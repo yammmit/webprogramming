@@ -14,7 +14,7 @@ export const db = {
       user_name: "테스터",
     },
     {
-      user_id: 4,
+      user_id: 3,
       user_email: "222",
       user_password: "222",
       user_name: "222",
@@ -28,7 +28,7 @@ export const db = {
       group_name: "우리집",
       members: [
         { user_id: 3, user_name: "123", role: "owner", joined_at: "2025-11-26T12:00:00Z" },
-        
+
       ],
     },
     {
@@ -57,11 +57,11 @@ export const db = {
       group_id: 10,
       title: "바닥 닦기",
       description: "주간 바닥 청소 — 물걸레로 바닥을 닦아주세요.",
-      difficulty: 4,
+      difficulty: 5,
       frequency_type: 'weekly',
       weekday_mask: 64, // e.g. Sunday=1 ... Saturday=64 (placeholder)
       created_at: '2025-11-01T10:00:00Z',
-      assigned_to: 4,
+      assigned_to: 3,
       status: "assigned",
     },
     {
@@ -73,7 +73,7 @@ export const db = {
       frequency_type: 'daily',
       weekday_mask: null,
       created_at: '2025-11-02T09:00:00Z',
-      assigned_to: null,
+      assigned_to: 3,
       status: "assigned",
     },
     {
@@ -97,7 +97,7 @@ export const db = {
       frequency_type: 'weekly',
       weekday_mask: 8,
       created_at: '2025-11-04T11:00:00Z',
-      assigned_to: 4,
+      assigned_to: 3,
       status: "completed",
     },
     {
