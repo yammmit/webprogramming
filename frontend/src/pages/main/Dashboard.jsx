@@ -66,8 +66,14 @@ export default function Dashboard() {
 
   if (loading) return <MainLayout>불러오는 중...</MainLayout>;
 
-  const inProgress = tasks.filter((t) => t.status === "assigned");
-  const completed = tasks.filter((t) => t.status === "completed");
+  // determine current user id from localStorage or parsed storedUser
+  const currentUserId = (storedUser && storedUser.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
+
+  // Only show tasks that are assigned to the current user
+  const myTasks = tasks.filter((t) => t.assigned_to === currentUserId);
+
+  const inProgress = myTasks.filter((t) => t.status === "assigned");
+  const completed = myTasks.filter((t) => t.status === "completed");
 
   return (
     <MainLayout>
@@ -119,7 +125,9 @@ export default function Dashboard() {
           </h3>
 
           {inProgress.length === 0 ? (
-            <p style={{ color: "#888" }}>진행 중인 집안일이 없어요</p>
+            <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+              진행 중인 집안일이 없어요
+            </div>
           ) : (
             <HorizontalTaskRow tasks={inProgress} />
           )}
@@ -139,7 +147,9 @@ export default function Dashboard() {
           </h3>
 
           {completed.length === 0 ? (
-            <p style={{ color: "#888" }}>아직 완료된 집안일이 없어요</p>
+            <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+              아직 완료된 집안일이 없어요
+            </div>
           ) : (
             <HorizontalTaskRow tasks={completed} />
           )}
@@ -163,7 +173,7 @@ function TaskList({ tasks }) {
       }}
     >
       {tasks.map((task) => (
-        <Card key={task.task_id} onClick={`/tasks/${task.task_id}`} bare>
+        <Card key={task.task_id} to={`/main/tasks/${task.task_id}`} bare>
           <div style={{ position: "relative" }}>
             {/* image area */}
             <div
@@ -233,8 +243,8 @@ function HorizontalTaskRow({ tasks }) {
       <div style={{ display: 'flex', gap: 12, width: 'max-content' }}>
         {tasks.map((task) => (
           <div key={task.task_id} style={{ minWidth: 220 }}>
-            <Card bare onClick={() => { /* navigate handled by Card via to/onClick if needed */ }}>
-              <div style={{ position: 'relative' }}>
+            <Card bare to={`/main/tasks/${task.task_id}`}>
+               <div style={{ position: 'relative' }}>
                 <div style={{
                   background: '#D7DBDC',
                   borderRadius: 12,
