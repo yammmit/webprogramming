@@ -58,7 +58,34 @@ const Settings = (props) => (
 );
 
 export default function BottomNavBar() {
-  // Make icon a function that receives isActive so we can set fill/color accordingly
+  // resolve current groupId from localStorage (fallback to '10')
+  const resolvedGroupId = (() => {
+    if (typeof window === "undefined") return "10";
+    try {
+      const gid =
+        localStorage.getItem("group_id") ||
+        localStorage.getItem("currentGroupId");
+      if (gid) return gid;
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        // try common shapes
+        if (parsed?.group_id) return String(parsed.group_id);
+        if (parsed?.groupId) return String(parsed.groupId);
+        if (
+          Array.isArray(parsed?.groups) &&
+          parsed.groups.length > 0
+        )
+          return String(
+            parsed.groups[0].group_id || parsed.groups[0].groupId
+          );
+      }
+    } catch (e) {
+      // ignore
+    }
+    return "10";
+  })();
+
   const menus = [
     {
       name: "홈",
@@ -72,7 +99,7 @@ export default function BottomNavBar() {
     },
     {
       name: "가사분담",
-      to: "/main/chores/:groupId",
+      to: `/main/chores/${resolvedGroupId}`,
       icon: (isActive) => (
         <CheckSquare
           className={isActive ? "text-[#F16E21]" : "text-gray-500"}

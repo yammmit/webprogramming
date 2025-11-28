@@ -10,6 +10,7 @@ import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
 import Dashboard from './pages/main/Dashboard';
 import TaskDetail from './pages/main/TaskDetail';
+import Settings from './pages/setting/Settings';
 import Chores from './pages/chores/Chores';
 import AssignRequest from './pages/chores/AssignRequest';
 import CreateChores from './pages/chores/CreateChores';
@@ -28,6 +29,7 @@ function App() {
       <Route path="/chores/create" element={<CreateChores />} />
       <Route path="/chores/review/:taskId" element={<ReviewChore />} />
       <Route path="/main/chores/:groupId" element={<Chores />} />
+      <Route path="/settings" element={<Settings />} />
       
     </Routes>
   )

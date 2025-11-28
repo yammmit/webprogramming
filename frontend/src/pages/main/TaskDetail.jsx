@@ -131,49 +131,51 @@ export default function TaskDetail() {
         </div>
 
         {/* sheet */}
-        <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)', position: 'relative', paddingBottom: 160, display: 'flex', flexDirection: 'column' }}>
           <div style={{ width: 48, height: 6, background: '#e6e6e6', borderRadius: 4, margin: '0 auto 12px' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
-              <div style={{ marginTop: 8 }}>
-                <StarRating value={task.difficulty} editable={false} />
+          {/* scrollable content area */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
+                <div style={{ marginTop: 8 }}>
+                  <StarRating value={task.difficulty} editable={false} />
+                </div>
               </div>
+
+              <div style={{ width: 80 }} />
             </div>
 
-            <div style={{ width: 80 }}>
-              {/* placeholder for right-side, e.g. avatar or action */}
-            </div>
+            <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
+
+            {history.length > 0 && (
+              <>
+                <h4 style={{ marginTop: 20, marginBottom: 8, fontWeight: 800, textAlign: 'left' }}>지난 기록</h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {history.map((h) => (
+                    <CompletionItem key={h.task_completion_id || `${h.assignment_id}-${h.task_id}`} record={h} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 동료평가: show evaluations for this task (if any) when viewing a completed task */}
+            {task.status === 'completed' && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>동료평가</div>
+                {taskEvaluations.length === 0 ? (
+                  <p style={{ color: '#888' }}>아직 동료평가가 없습니다.</p>
+                ) : (
+                  <TaskEvaluation evaluations={taskEvaluations} />
+                )}
+              </div>
+            )}
           </div>
 
-          <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
-
-          {history.length > 0 && (
-            <>
-              <h4 style={{ marginTop: 20, marginBottom: 8, fontWeight: 800, textAlign: 'left' }}>지난 기록</h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {history.map((h) => (
-                  <CompletionItem key={h.task_completion_id || `${h.assignment_id}-${h.task_id}`} record={h} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* 동료평가: show evaluations for this task (if any) when viewing a completed task */}
-          {task.status === 'completed' && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>동료평가</div>
-              {taskEvaluations.length === 0 ? (
-                <p style={{ color: '#888' }}>아직 동료평가가 없습니다.</p>
-              ) : (
-                <TaskEvaluation evaluations={taskEvaluations} />
-              )}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+          {/* action footer - sits above bottom navbar */}
+          <div style={{ position: 'absolute', left: 18, right: 18, bottom: 18, display: 'flex', gap: 12 }}>
             <button onClick={() => navigate(-1)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>돌아가기</button>
             {task?.status !== 'completed' && (
               <button onClick={() => setShowConfirm(true)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>완료하기</button>
@@ -216,19 +218,19 @@ export default function TaskDetail() {
 
           {/* Share modal */}
           {showShare && (
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1300, background: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 18, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>짝짝짝!</div>
-              <div style={{ fontSize: 16, marginBottom: 6 }}><strong>{task.title}</strong>를 완료했습니다.</div>
-              <div style={{ color: '#666', marginBottom: 12 }}>룸메이트들에게 공유할까요?</div>
+            <div style={{ position: 'absolute', left: 18, right: 18, bottom: 78, zIndex: 1300, background: '#fff', borderRadius: 12, padding: 18, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}>
+               <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>짝짝짝!</div>
+               <div style={{ fontSize: 16, marginBottom: 6 }}><strong>{task.title}</strong>를 완료했습니다.</div>
+               <div style={{ color: '#666', marginBottom: 12 }}>룸메이트들에게 공유할까요?</div>
 
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button style={{ width: 56, height: 56, borderRadius: 10, border: '1px solid #DF6437', background: '#fff' }}>📷</button>
+               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                 <button style={{ width: 56, height: 56, borderRadius: 10, border: '1px solid #DF6437', background: '#fff' }}>📷</button>
                 <button onClick={() => { setShowShare(false); navigate('/main/dashboard'); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: '1px solid #DF6437', background: '#fff', color: '#DF6437' }}>메인으로</button>
                 <button onClick={() => { alert('공유되었습니다!'); setShowShare(false); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: 'none', background: '#DF6437', color: '#fff' }}>공유하기</button>
-              </div>
-            </div>
-          )}
-        </div>
+               </div>
+             </div>
+           )}
+         </div>
       </div>
     </MainLayout>
   );
