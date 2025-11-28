@@ -5,6 +5,7 @@ import { fetchTasksByGroup } from "../../api/tasks";
 import character from "../../assets/images/splash-character.png";
 import Vcharacter from "../../assets/images/Vaccum_Character.png";
 import StarRating from "../../components/ui/StarRating";
+import { db } from '../../mocks/db';
 
 import MainLayout from "../../components/layout/MainLayout";
 import Card from "../../components/ui/Card";
@@ -88,9 +89,18 @@ export default function Dashboard() {
   // Unassigned tasks (available to be picked)
   const unassigned = groupTasks.filter((t) => t.assigned_to == null);
 
-  // banner counts
-  const headerCount = selectedTab === 'unassigned' ? unassigned.length : inProgress.length;
-  const headerLabel = selectedTab === 'unassigned' ? '미배정된 집안일이' : '진행중인 집안일이';
+  // tasks that are completed and not yet reviewed by current user
+  const toReview = groupTasks.filter((t) => {
+    if (t.status !== 'completed') return false;
+    // check mock reviews storage first
+    const hasReviewed = (db.reviews && db.reviews.some(r => String(r.task_id) === String(t.task_id) && String(r.user_id) === String(currentUserId)))
+      || (t.reviews && t.reviews.some(r => String(r.user_id) === String(currentUserId)));
+    return !hasReviewed;
+  });
+
+  // banner counts (reflect selected tab, including review)
+  const headerCount = selectedTab === 'unassigned' ? unassigned.length : (selectedTab === 'assigned' ? inProgress.length : (selectedTab === 'review' ? toReview.length : 0));
+  const headerLabel = selectedTab === 'unassigned' ? '미배정된 집안일이' : (selectedTab === 'assigned' ? '진행중인 집안일이' : (selectedTab === 'review' ? '리뷰가 필요한 집안일이' : '집안일이'));
 
   return (
     <MainLayout>
@@ -127,15 +137,17 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
-
+          
         {/* 배정 / 미배정 탭 버튼 */}
         <section style={{ marginBottom: "24px" }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             <button onClick={() => setSelectedTab('unassigned')} style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #DFDFDF', background: selectedTab === 'unassigned' ? '#fff' : 'transparent' }}>미배정</button>
             <button onClick={() => setSelectedTab('assigned')} style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #DFDFDF', background: selectedTab === 'assigned' ? '#fff' : 'transparent' }}>배정</button>
+            <button onClick={() => setSelectedTab('review')} style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid #DFDFDF', background: selectedTab === 'review' ? '#fff' : 'transparent' }}>리뷰</button>
           </div>
 
-          {selectedTab === 'unassigned' ? (
+          {/* Render lists per selected tab explicitly to avoid showing multiple lists */}
+          {selectedTab === 'unassigned' && (
             (unassigned.length === 0) ? (
               <div style={{ minHeight: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
                 미배정된 집안일이 없어요
@@ -143,13 +155,25 @@ export default function Dashboard() {
             ) : (
               <HorizontalTaskRow tasks={unassigned} />
             )
-          ) : (
+          )}
+
+          {selectedTab === 'assigned' && (
             (inProgress.length === 0) ? (
               <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
                 배정된 집안일이 없어요
               </div>
             ) : (
               <HorizontalTaskRow tasks={inProgress} />
+            )
+          )}
+
+          {selectedTab === 'review' && (
+            (toReview.length === 0) ? (
+              <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                평가할 항목이 없습니다
+              </div>
+            ) : (
+              <HorizontalTaskRow tasks={toReview} cardBase={'/chores/review'} />
             )
           )}
         </section>
@@ -260,44 +284,49 @@ function TaskList({ tasks }) {
 }
 
 // Horizontal row for in-progress tasks
-function HorizontalTaskRow({ tasks }) {
+function HorizontalTaskRow({ tasks, cardBase = '/main/assigned-request' }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {tasks.map((task) => (
         <div key={task.task_id}>
           {task.assigned_to == null ? (
-            <Card bare to={`/main/assigned-request/${task.task_id}`}>
-               <div style={{ position: 'relative' }}>
-                 <div style={{
-                   background: '#D7DBDC',
-                   borderRadius: 12,
-                   padding: 14,
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center',
-                   height: 140,
-                   boxSizing: 'border-box'
-                 }}>
-                   <img src={character} alt='character' style={{ width: '80%', height: '100%', objectFit: 'contain' }} />
-                 </div>
+            <Card bare to={`${cardBase}/${task.task_id}`}>
+                <div style={{ position: 'relative' }}>
+                  <div style={{
+                    background: '#D7DBDC',
+                    borderRadius: 12,
+                    padding: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 140,
+                    boxSizing: 'border-box'
+                  }}>
+                    <img src={character} alt='character' style={{ width: '80%', height: '100%', objectFit: 'contain' }} />
+                  </div>
 
-                 <div style={{
-                   position: 'relative',
-                   marginTop: -22,
-                   background: '#F5F5F5',
-                   borderRadius: '0 0 12px 12px',
-                   padding: '10px 12px',
-                 }}>
-                   <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
-                     <StarRating value={task.difficulty} editable={false} />
-                   </div>
+                  <div style={{
+                    position: 'relative',
+                    marginTop: -22,
+                    background: '#F5F5F5',
+                    borderRadius: '0 0 12px 12px',
+                    padding: '10px 12px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
+                      <StarRating value={task.difficulty} editable={false} />
+                    </div>
 
-                   <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#111' }}>{task.title}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#111' }}>{task.title}</div>
+                    {task.assigned_to != null && (
+                      <div style={{ fontSize: 12, color: '#666', marginTop: 6, textAlign: 'center' }}>
+                        {(() => { const u = db.users.find(x => x.user_id === task.assigned_to); return u ? u.user_name : '알수없음'; })()}
+                      </div>
+                    )}
                  </div>
                </div>
-             </Card>
+            </Card>
            ) : (
-             <Card bare to={`/main/assigned-request/${task.task_id}`}>
+             <Card bare to={`${cardBase}/${task.task_id}`}>
                <div style={{ position: 'relative' }}>
                  <div style={{
                    background: '#D7DBDC',
@@ -324,6 +353,11 @@ function HorizontalTaskRow({ tasks }) {
                    </div>
 
                    <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#111' }}>{task.title}</div>
+                   {task.assigned_to != null && (
+                     <div style={{ fontSize: 12, color: '#666', marginTop: 6, textAlign: 'center' }}>
+                       {(() => { const u = db.users.find(x => x.user_id === task.assigned_to); return u ? u.user_name : '알수없음'; })()}
+                     </div>
+                   )}
                  </div>
 
                  {task.status === 'completed' && (
