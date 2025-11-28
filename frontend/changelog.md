@@ -2,3 +2,4 @@
 
 ### NOV 28 (CHORES)
 
+### NOV 29 (SETTINGS)
