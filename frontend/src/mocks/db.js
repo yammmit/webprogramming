@@ -2,10 +2,10 @@
 // 다양한 상태의 데이터로 테스트하기 쉬우도록 구성합니다.
 export const db = {
   users: [
-    { user_id: 1, email: "user1@example.com", password: "pw1", name: "홍길동" },
-    { user_id: 2, email: "tester@example.com", password: "pw", name: "테스터" },
-    { user_id: 3, email: "user3@example.com", password: "pw3", name: "이영희" },
-    { user_id: 4, email: "user4@example.com", password: "pw4", name: "수빈" }
+    { user_id: 1, email: "user1@example.com", password: "pw1", user_name: "홍길동" },
+    { user_id: 2, email: "tester@example.com", password: "pw", user_name: "테스터" },
+    { user_id: 3, email: "user3@example.com", password: "pw3", user_name: "이영희" },
+    { user_id: 4, email: "user4@example.com", password: "pw4", user_name: "수빈" }
   ],
 
   groups: [

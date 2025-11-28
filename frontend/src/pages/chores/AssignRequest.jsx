@@ -31,13 +31,22 @@ export default function AssignedRequest() {
     try { if (storedRaw) user = JSON.parse(storedRaw); } catch (e) { }
     const currentUserId = (user && user.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
 
-    const dbTask = db.tasks.find(x => String(x.task_id) === String(taskId));
-    if (dbTask) dbTask.assigned_to = currentUserId || null;
-
-    // optionally add a request/assignment record
-
-    // navigate back to chores of that group
-    navigate(`/main/chores/${dbTask.group_id}`);
+    // call API (mocked by msw)
+    fetch(`/tasks/${taskId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': String(currentUserId) },
+      body: JSON.stringify({ assignment_type: 'self-request', user_id: Number(currentUserId) })
+    }).then(async (res) => {
+      if (res.status === 201) {
+        navigate(`/main/chores/${task.group_id}`);
+      } else {
+        const err = await res.json().catch(() => null);
+        alert('배정에 실패했습니다');
+      }
+    }).catch((e) => {
+      console.error(e);
+      alert('네트워크 에러');
+    });
   }
 
   return (

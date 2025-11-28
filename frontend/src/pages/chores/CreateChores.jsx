@@ -6,15 +6,24 @@ import StarRating from '../../components/ui/StarRating';
 export default function CreateChores() {
   const navigate = useNavigate();
 
-  // try to determine group_id from localStorage or fallback to 10
-  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-  let defaultGroupId = 10;
-  try {
-    const u = storedUser ? JSON.parse(storedUser) : null;
-    if (u && u.group_id) defaultGroupId = u.group_id;
-  } catch (e) {}
+  const getInitialGroupId = () => {
+    if (typeof window !== 'undefined') {
+      const cur = localStorage.getItem('currentGroupId') || localStorage.getItem('group_id');
+      if (cur) return Number(cur);
+      try {
+        const raw = localStorage.getItem('user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          if (u?.group_id) return Number(u.group_id);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return 10;
+  };
 
-  const [groupId] = useState(defaultGroupId);
+  const [groupId, setGroupId] = useState(getInitialGroupId);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [frequencyType, setFrequencyType] = useState('weekly'); // none, daily, weekly, biweekly, monthly, yearly
@@ -41,7 +50,6 @@ export default function CreateChores() {
     if (!title.trim()) return alert('제목을 입력하세요.');
 
     const payload = {
-      group_id: Number(groupId),
       title: title.trim(),
       description: description.trim() || null,
       difficulty: Number(difficulty) || 1,
@@ -49,16 +57,36 @@ export default function CreateChores() {
       weekday_mask: frequencyType === 'none' ? null : (weekdayMask || null),
     };
 
-    // For now, log payload. Replace with API call if available.
-    console.log('CreateChore payload:', payload);
-
-    // TODO: call API POST /tasks or similar
-    // fetch('/api/tasks', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-    //   .then(() => navigate(`/main/chores/${payload.group_id}`));
-
-    alert('저장되었습니다. (콘솔에서 payload 확인 가능)');
-    navigate(`/main/chores/${payload.group_id}`);
+    // call API POST /groups/:groupId/tasks
+    fetch(`/groups/${groupId}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(async (res) => {
+      if (res.status === 201) {
+        const data = await res.json().catch(() => null);
+        alert('저장되었습니다.');
+        navigate(`/main/chores/${groupId}`);
+      } else {
+        const err = await res.json().catch(() => null);
+        console.error('create task failed', err);
+        alert('저장에 실패했습니다.');
+      }
+    }).catch((e) => {
+      console.error(e);
+      alert('네트워크 에러');
+    });
   }
+
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key === 'currentGroupId' || e.key === 'group_id') {
+        setGroupId(getInitialGroupId());
+      }
+    }
+    if (typeof window !== 'undefined') window.addEventListener('storage', onStorage);
+    return () => { if (typeof window !== 'undefined') window.removeEventListener('storage', onStorage); };
+  }, []);
 
   return (
     <ChoreLayout>
@@ -77,7 +105,7 @@ export default function CreateChores() {
                 <input
                   value={title}
                   onChange={(e)=>setTitle(e.target.value.slice(0,30))}
-                  placeholder="별칭을 입력하세요"
+                  placeholder="집안일 이름을 입력하세요"
                   maxLength={30}
                   style={{ flex: 1, minWidth: 0, border: 'none', borderBottom: '1px solid #cfcfcf', padding: '8px 6px', fontSize: 16 }}
                 />
@@ -124,7 +152,7 @@ export default function CreateChores() {
 
           <div style={{ position: 'absolute', left: 20, right: 20, bottom: 20, display: 'flex', gap: 12 }}>
             <button onClick={()=>{ clearForm(); navigate(-1); }} style={{ flex: 1, padding: '16px 20px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>취소하기</button>
-            <button onClick={handleSave} style={{ flex: 1, padding: '16px 20px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>저장하기</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: '16px 20px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>등록하기</button>
           </div>
 
         </div>
