@@ -71,8 +71,8 @@ export default function BottomNavBar() {
       ),
     },
     {
-      name: "집안일",
-      to: "/tasks",
+      name: "가사분담",
+      to: "/main/chores/:groupId",
       icon: (isActive) => (
         <CheckSquare
           className={isActive ? "text-[#F16E21]" : "text-gray-500"}

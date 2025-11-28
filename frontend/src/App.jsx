@@ -10,6 +10,9 @@ import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
 import Dashboard from './pages/main/Dashboard';
 import TaskDetail from './pages/main/TaskDetail';
+import Chores from './pages/chores/Chores';
+import AssignRequest from './pages/chores/AssignRequest';
+import CreateChores from './pages/chores/CreateChores';
 
 function App() {
   return (
@@ -20,6 +23,10 @@ function App() {
       <Route path="/signup" element={<SignUp />} />
       <Route path="/main/dashboard" element={<Dashboard />} />
       <Route path="/main/tasks/:taskId" element={<TaskDetail />} />
+      <Route path="/main/assigned-request/:taskId" element={<AssignRequest />} />
+      <Route path="/chores/create" element={<CreateChores />} />
+      <Route path="/main/chores/:groupId" element={<Chores />} />
+      
     </Routes>
   )
 }

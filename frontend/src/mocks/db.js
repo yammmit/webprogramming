@@ -73,7 +73,7 @@ export const db = {
       frequency_type: 'daily',
       weekday_mask: null,
       created_at: '2025-11-02T09:00:00Z',
-      assigned_to: 3,
+      assigned_to: 1,
       status: "assigned",
     },
     {
@@ -97,7 +97,7 @@ export const db = {
       frequency_type: 'weekly',
       weekday_mask: 8,
       created_at: '2025-11-04T11:00:00Z',
-      assigned_to: 3,
+      assigned_to: 1,
       status: "completed",
     },
     {
