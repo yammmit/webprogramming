@@ -24,15 +24,21 @@ export default function Login() {
       const res = await api.post('/auth/login', { email, password });
       const data = res.data;
 
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      // prefer access_token but accept token as well
+      const token = data.access_token || data.token;
+      const user = data.user;
+
+      if (token) {
+        localStorage.setItem('access_token', token);
       }
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+        if (user.user_email) localStorage.setItem('user_email', user.user_email);
+        if (user.user_name) localStorage.setItem('user_name', user.user_name);
       }
 
       setLoading(false);
-      navigate('/main');
+      navigate('/main/dashboard');
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
