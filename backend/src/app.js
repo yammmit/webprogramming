@@ -5,6 +5,7 @@ import testRoutes from "./routes/test.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
 import groupRouter from "./routes/group.routes.js";
+import taskRouter from "./routes/task.routes.js";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -14,12 +15,10 @@ app.use(express.json());
 
 // 라우터
 app.use("/api", testRoutes);
-
 app.use("/auth", authRouter);
-
 app.use("/users", userRouter);
-
 app.use("/groups", groupRouter);
+app.use("/", taskRouter);
 
 // 서버 테스트용 엔드포인트
 app.get("/", (req, res) => {
