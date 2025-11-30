@@ -4,17 +4,18 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 
-// ⬇⬇⬇ MSW 실행 (development 환경에서만)
+// ⬇⬇⬇ MSW 실행 (development 환경에서만, VITE_USE_MOCK='true'일 때만)
 async function enableMocking() {
-  if (process.env.NODE_ENV === "development") {
-    const { worker } = await import("./mocks/browser")
+  if (import.meta.env.VITE_USE_MOCK === 'true' && process.env.NODE_ENV === "development") {
+    const { worker } = await import("./mocks/browser");
     await worker.start({
-      onUnhandledRequest: "bypass", // 경고 줄이고 실 서비스처럼 동작
-    })
+      onUnhandledRequest: "bypass",
+    });
   }
 }
 
-enableMocking() // MSW 비동기 실행
+// 기본적으로 mock 비활성화 — 필요하면 VITE_USE_MOCK='true'로 실행하세요
+// enableMocking() // MSW 비동기 실행
 // ⬆⬆⬆
 
 // Render

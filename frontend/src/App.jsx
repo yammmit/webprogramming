@@ -19,6 +19,7 @@ import GroupSettings from "./pages/setting/GroupSettings";
 import CreateGroup from "./pages/setting/CreateGroup";
 import GroupManage from "./pages/setting/GroupManage";
 import GroupSpecific from './pages/setting/GroupSpecific';
+import MyInvitation from './pages/setting/MyInvitation';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
       <Route path="/settings/groups" element={<GroupSettings />} />
       <Route path="/settings/groups/create" element={<CreateGroup />} />
       <Route path="/settings/groups/manage" element={<GroupManage />} />
+      <Route path="/settings/invitations" element={<MyInvitation />} />
       <Route path="/settings/groups/:groupId" element={<GroupSpecific />} />
     </Routes>
   )

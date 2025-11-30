@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../components/layout/AuthLayout";
 import { useState } from "react";
-import googleLogo from "../../assets/images/Google-Logo.png";
-import api from "../../utils/axios";
+import api from "../../api/axiosInstance";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,39 +11,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin() {
+  const handleLogin = async (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     setError("");
-    if (!email || !password) {
-      setError("이메일과 비밀번호를 입력해주세요.");
-      return;
-    }
-
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      const data = res.data;
-
-      // prefer access_token but accept token as well
-      const token = data.access_token || data.token;
-      const user = data.user;
-
-      if (token) {
-        localStorage.setItem('access_token', token);
-      }
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-        if (user.user_email) localStorage.setItem('user_email', user.user_email);
-        if (user.user_name) localStorage.setItem('user_name', user.user_name);
-      }
-
-      setLoading(false);
+      const token = res.data.token;
+      const user = res.data.user;
+      if (token) localStorage.setItem('access_token', token);
+      if (user) localStorage.setItem('user', JSON.stringify(user));
       navigate('/main/dashboard');
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('로그인에 실패했습니다.');
-      }
+      console.error(err);
+      setError(err.response?.data?.error || '로그인에 실패했습니다.');
+    } finally {
       setLoading(false);
     }
   }
@@ -59,7 +40,7 @@ export default function Login() {
         </div>
       }
       bottom={
-        <div className="flex flex-col w-full gap-6">
+        <form onSubmit={handleLogin} className="flex flex-col w-full gap-6">
           {/* 이메일 */}
           <div>
             <label className="block mb-1 text-sm font-semibold text-left w-full">이메일</label>
@@ -96,29 +77,17 @@ export default function Login() {
             </p>
           </div>
 
+          {/* 에러 */}
+          {error && <p className="text-center text-sm text-red-500">{error}</p>}
+
           {/* Login 버튼 */}
           <button
-            onClick={handleLogin}
+            type="submit"
             disabled={loading}
             className={`w-full h-[50px] ${loading ? 'opacity-60' : ''} bg-[#D9673C] text-white rounded-xl text-lg font-semibold flex items-center justify-center`}
           >
             {loading ? '로딩...' : '로그인'}
           </button>
-
-          {/* 에러 */}
-          {error && <p className="text-center text-sm text-red-500">{error}</p>}
-
-         {/* 구글 로그인 */}
-          <div>
-            <div className="w-full h-[50px] flex items-center border border-[#D9673C] rounded-xl px-4 gap-2 justify-center bg-[#E7E9EB]">
-              <img
-                src={googleLogo}
-                alt="google"
-                className="w-5 h-5"
-              />
-              <span className="text-sm text-[#D9673C]">구글 계정으로 가입하기</span>
-            </div>
-          </div>
 
           {/* 회원가입 이동 */}
           <p className="text-center text-sm">
@@ -130,7 +99,7 @@ export default function Login() {
               가입하기
             </span>
           </p>
-        </div>
+        </form>
       }
     />
   );

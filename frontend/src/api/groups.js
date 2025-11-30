@@ -70,7 +70,8 @@ export const fetchGroupById = async (groupId) => {
 
   try {
     const res = await axiosInstance.get(`/groups/${groupId}`);
-    return res.data;
+    // backend may return { group: {...} } or the group object directly
+    return res.data?.group || res.data;
   } catch (e) {
     console.warn(
       "fetchGroupById failed, returning mock group from db as fallback",
@@ -141,7 +142,7 @@ export const leaveGroup = async (groupId, userId) => {
     if (token) headers["Authorization"] = `Bearer ${token}`;
     else if (curUserId) headers["x-user-id"] = String(curUserId);
 
-    const res = await axiosInstance.delete(`/groups/${groupId}/members/${userId}`, { headers });
+    const res = await axiosInstance.delete(`/groups/${groupId}/leave`, { headers });
     return res.data;
   } catch (e) {
     console.error("leaveGroup failed", e);
