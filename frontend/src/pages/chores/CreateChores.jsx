@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChoreLayout from '../../components/layout/ChoresLayout';
 import StarRating from '../../components/ui/StarRating';
+import api from '../../api/axiosInstance';
 
 export default function CreateChores() {
   const navigate = useNavigate();
@@ -57,25 +58,22 @@ export default function CreateChores() {
       weekday_mask: frequencyType === 'none' ? null : (weekdayMask || null),
     };
 
-    // call API POST /groups/:groupId/tasks
-    fetch(`/groups/${groupId}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(async (res) => {
-      if (res.status === 201) {
-        const data = await res.json().catch(() => null);
-        alert('저장되었습니다.');
-        navigate(`/main/chores/${groupId}`);
-      } else {
-        const err = await res.json().catch(() => null);
-        console.error('create task failed', err);
-        alert('저장에 실패했습니다.');
+    // call API via shared axios instance so requests go to backend
+    (async () => {
+      try {
+        const res = await api.post(`/groups/${groupId}/tasks`, payload);
+        if (res.status === 201 || res.status === 200) {
+          alert('저장되었습니다.');
+          navigate(`/main/chores/${groupId}`);
+        } else {
+          console.error('create task failed', res.data);
+          alert('저장에 실패했습니다.');
+        }
+      } catch (e) {
+        console.error('create task error', e);
+        alert(e.response?.data?.error || '네트워크 에러');
       }
-    }).catch((e) => {
-      console.error(e);
-      alert('네트워크 에러');
-    });
+    })();
   }
 
   useEffect(() => {

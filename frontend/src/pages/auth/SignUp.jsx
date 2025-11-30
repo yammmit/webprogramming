@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../components/layout/AuthLayout";
 import { useState } from "react";
-import api from "../../utils/axios";
+import api from "../../api/axiosInstance";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -23,20 +23,23 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      const res = await api.post('/auth/signup', { email, password, name });
-      const data = res.data;
+      // Call backend signup with email/password
+      const res = await api.post("/auth/signup", { email, password, name }, { baseURL: "http://localhost:3000" });
+      const token = res.data.token;
+      const user = res.data.user;
 
-      if (data && data.user_id) {
-        setSuccess('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
-        setTimeout(() => navigate('/login'), 1000);
-      } else {
-        setError((data && data.message) || '회원가입 실패');
-      }
+      // Store JWT and user
+      if (token) localStorage.setItem("access_token", token);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+
+      setSuccess("회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.");
+      setTimeout(() => navigate('/login'), 1000);
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
+      console.error(err);
+      if (err.response?.data) {
+        setError(err.response.data.error || err.response.data.message || "회원가입에 실패했습니다.");
       } else {
-        setError('서버와 통신 중 오류가 발생했습니다.');
+        setError(err.message || "회원가입에 실패했습니다.");
       }
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
+import api from '../../api/axiosInstance';
 
 export default function CreateGroup() {
   const [name, setName] = useState('');
@@ -9,9 +10,9 @@ export default function CreateGroup() {
   async function handleCreate() {
     if (!name.trim()) return alert('그룹 이름을 입력하세요');
     try {
-      const res = await fetch('/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group_name: name.trim() }) });
-      if (res.status === 201) {
-        const data = await res.json();
+      const res = await api.post('/groups', { group_name: name.trim() });
+      if (res.status === 201 || res.status === 200) {
+        const data = res.data;
         // set newly selected group
         if (typeof window !== 'undefined' && data?.group_id) localStorage.setItem('currentGroupId', String(data.group_id));
         alert('그룹이 생성되었습니다');
@@ -21,7 +22,7 @@ export default function CreateGroup() {
       }
     } catch (e) {
       console.error(e);
-      alert('네트워크 에러');
+      alert(e.response?.data?.error || '네트워크 에러');
     }
   }
 

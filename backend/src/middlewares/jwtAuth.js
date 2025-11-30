@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 
-export const verifyToken = (req, res, next) => {
+const jwtAuth = (req, res, next) => {
   const header = req.headers.authorization || req.headers.Authorization;
-
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({ error: "No token provided" });
   }
@@ -13,7 +12,9 @@ export const verifyToken = (req, res, next) => {
     req.user = payload;
     return next();
   } catch (err) {
-    console.error("verifyToken JWT verify failed:", err.message || err);
+    console.error("JWT verify failed:", err.message || err);
     return res.status(401).json({ error: "Invalid token" });
   }
 };
+
+export default jwtAuth;

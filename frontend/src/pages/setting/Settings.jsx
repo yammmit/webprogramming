@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import { fetchMyGroups } from "../../api/groups";
+import api from "../../api/axiosInstance";
 
 
 export default function Settings() {
@@ -31,8 +32,40 @@ export default function Settings() {
   useEffect(() => {
     async function load() {
       try {
-        const g = await fetchMyGroups();
-        setGroups(g || []);
+        // Prefer centralized api; fallback to fetchMyGroups if implemented
+        let raw;
+        try {
+          const res = await api.get('/groups');
+          raw = res.data;
+        } catch (e) {
+          console.warn('api.get(/groups) failed, falling back to fetchMyGroups', e);
+          raw = await fetchMyGroups();
+        }
+
+        console.log('raw groups response:', raw);
+        // Normalize shapes: array, { data: [...] }, { groups: [...] }, { groups: { data: [...] } }
+        let normalized = [];
+        if (Array.isArray(raw)) normalized = raw;
+        else if (raw?.data && Array.isArray(raw.data)) normalized = raw.data;
+        else if (raw?.groups && Array.isArray(raw.groups)) normalized = raw.groups;
+        else if (raw?.groups?.data && Array.isArray(raw.groups.data)) normalized = raw.groups.data;
+        else normalized = raw || [];
+
+        // Ensure member entries are user objects (member.user) for UI consumption
+        const groupsWithMembers = normalized.map((g) => ({
+          ...g,
+          members: (g.members || []).map((m) => (m && m.user ? m.user : m)),
+        }));
+        setGroups(groupsWithMembers);
+        // If currently selected group is no longer in user's groups (e.g., user left), clear selection
+        try {
+          const current = localStorage.getItem('currentGroupId') || localStorage.getItem('group_id') || null;
+          if (current && !normalized.find(g => String(g.group_id) === String(current))) {
+            setSelectedGroupId(null);
+            localStorage.removeItem('currentGroupId');
+            localStorage.removeItem('group_id');
+          }
+        } catch (e) {}
       } catch (e) {
         console.error("Failed to load groups", e);
       }
@@ -56,15 +89,15 @@ export default function Settings() {
         return;
       }
 
-      // fallback: fetch group detail
+      // fallback: fetch group detail via API
       try {
-        const res = await fetch(`/groups/${selectedGroupId}`);
-        if (!res.ok) {
-          setGroupMembers([]);
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled) setGroupMembers(data.members || []);
+        const res = await api.get(`/groups/${selectedGroupId}`);
+        const data = res.data;
+        // possible shapes: { members: [...] } or { group: { members: [...] } } or { data: { members: [...] } }
+        let members = data?.members || data?.group?.members || data?.data?.members || [];
+        // normalize member objects to user objects if nested
+        members = (members || []).map((m) => (m && m.user ? m.user : m));
+        if (!cancelled) setGroupMembers(members);
       } catch (e) {
         console.error('Failed to load group detail', e);
         if (!cancelled) setGroupMembers([]);
@@ -179,6 +212,16 @@ export default function Settings() {
               style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
             >
               <div style={{ fontSize: 16 }}>그룹 설정</div>
+              <div style={{ color: "#999" }}>{">"}</div>
+            </button>
+
+            <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
+
+            <button
+              onClick={() => navigate("/settings/invitations")}
+              style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: 16 }}>내 초대함</div>
               <div style={{ color: "#999" }}>{">"}</div>
             </button>
 

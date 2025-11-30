@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import StarRating from '../../components/ui/StarRating';
 import { db } from '../../mocks/db';
+import api from '../../api/axiosInstance';
 import Vcharacter from "../../assets/images/Vaccum_Character.png";
 
 export default function AssignedRequest() {
@@ -14,9 +15,24 @@ export default function AssignedRequest() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    const t = db.tasks.find(x => String(x.task_id) === String(taskId));
-    setTask(t || null);
-    setLoading(false);
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        // try backend first
+        const res = await api.get(`/tasks/${taskId}`);
+        const t = res.data?.task || res.data;
+        if (!cancelled) setTask(t || null);
+      } catch (err) {
+        console.warn('Failed to load task from backend, falling back to mock', err?.message || err);
+        const t = db.tasks.find(x => String(x.task_id) === String(taskId));
+        if (!cancelled) setTask(t || null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, [taskId]);
 
   if (loading) return <MainLayout>불러오는 중...</MainLayout>;
@@ -25,28 +41,23 @@ export default function AssignedRequest() {
   const isAssigned = task.assigned_to != null;
   const assignedUser = isAssigned ? db.users.find(u => u.user_id === task.assigned_to) : null;
 
-  function applyAssignment() {
+  async function applyAssignment() {
     const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
     let user = null;
     try { if (storedRaw) user = JSON.parse(storedRaw); } catch (e) { }
     const currentUserId = (user && user.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
 
-    // call API (mocked by msw)
-    fetch(`/tasks/${taskId}/assign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': String(currentUserId) },
-      body: JSON.stringify({ assignment_type: 'self-request', user_id: Number(currentUserId) })
-    }).then(async (res) => {
-      if (res.status === 201) {
+    try {
+      const res = await api.post(`/tasks/${taskId}/assign`, { assignment_type: 'self-request', user_id: Number(currentUserId) });
+      if (res.status === 201 || res.status === 200) {
         navigate(`/main/chores/${task.group_id}`);
       } else {
-        const err = await res.json().catch(() => null);
         alert('배정에 실패했습니다');
       }
-    }).catch((e) => {
-      console.error(e);
-      alert('네트워크 에러');
-    });
+    } catch (e) {
+      console.error('assign error', e);
+      alert(e.response?.data?.error || '배정 실패');
+    }
   }
 
   return (

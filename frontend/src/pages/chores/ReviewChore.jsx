@@ -1,66 +1,82 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ChoresLayout from '../../components/layout/ChoresLayout';
 import StarRating from '../../components/ui/StarRating';
 import { db } from '../../mocks/db';
+import axiosInstance from '../../api/axiosInstance';
 
 export default function ReviewChore() {
   const { taskId } = useParams();
   const navigate = useNavigate();
-  const task = db.tasks.find(t => String(t.task_id) === String(taskId));
-
-  const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-  let storedUser = null;
-  try { if (storedRaw) storedUser = JSON.parse(storedRaw); } catch(e){}
-  const currentUserId = (storedUser && storedUser.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
-
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
 
-  const assignedUser = task.assigned_to != null ? db.users.find(u => u.user_id === task.assigned_to) : null;
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axiosInstance.get(`/tasks/${taskId}`);
+        const t = res.data?.task || res.data;
+        if (!cancelled) setTask(t || null);
+      } catch (e) {
+        console.warn('Failed to load task from backend, falling back to mock', e?.message || e);
+        // fallback to mock
+        try {
+          const t = db.tasks.find((x) => String(x.task_id) === String(taskId));
+          if (!cancelled) setTask(t || null);
+        } catch (err) {
+          if (!cancelled) setError(err?.message || String(err));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [taskId]);
 
+  // resolve current user id from localStorage
+  let storedUserLocal = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) storedUserLocal = JSON.parse(raw);
+    } catch (e) {}
+  }
+  const currentUserId = (storedUserLocal && storedUserLocal.user_id) || (typeof window !== 'undefined' && Number(localStorage.getItem('user_id')));
+
+  const assignedUser = (task && task.assigned_to != null) ? db.users.find(u => u.user_id === task.assigned_to) : null;
+
+  if (loading) return <ChoresLayout>불러오는 중...</ChoresLayout>;
+  if (error) return <ChoresLayout>에러: {String(error)}</ChoresLayout>;
   if (!task) return <ChoresLayout>집안일을 찾을 수 없습니다.</ChoresLayout>;
 
-  function handleComplete() {
+  async function handleComplete() {
     if (!rating || rating < 1) return alert('별점을 선택하세요.');
 
-    // For mock data, use assignment_id = task.task_id (placeholder)
-    const assignment_id = Number(task.task_id);
-    const evaluator_id = Number(currentUserId || 0);
-
-    // ensure unique (assignment_id, evaluator_id)
-    db.task_evaluations = db.task_evaluations || [];
-    const exists = db.task_evaluations.some(ev => Number(ev.assignment_id) === assignment_id && Number(ev.evaluator_id) === evaluator_id);
-    if (exists) {
-      alert('이미 평가하셨습니다.');
-      navigate(-1);
-      return;
+    try {
+      const body = {
+        rating: Number(rating),
+        comment: comment.trim() || null,
+        is_anonymous: !!isAnonymous,
+      };
+      const res = await axiosInstance.post(`/tasks/${taskId}/evaluations`, body);
+      if (res.status === 201 || res.status === 200) {
+        alert('평가가 등록되었습니다.');
+        navigate(-1);
+      } else {
+        alert(res.data?.error || '평가 등록에 실패했습니다.');
+      }
+    } catch (e) {
+      console.error('create evaluation failed', e);
+      alert(e.response?.data?.error || '평가 등록 중 오류가 발생했습니다');
     }
-
-    // determine new id
-    let newId = 1;
-    if (db.counters && typeof db.counters.task_evaluation_id !== 'undefined') {
-      newId = ++db.counters.task_evaluation_id;
-    } else {
-      const max = db.task_evaluations.reduce((m, e) => Math.max(m, Number(e.task_evaluation_id || e.id || 0)), 0);
-      newId = max + 1;
-    }
-
-    const rec = {
-      task_evaluation_id: newId,
-      assignment_id,
-      evaluator_id,
-      rating: Number(rating),
-      comment: comment.trim() || null,
-      is_anonymous: !!isAnonymous,
-      created_at: new Date().toISOString(),
-    };
-
-    db.task_evaluations.push(rec);
-    console.log('Saved evaluation', rec);
-    alert('평가가 등록되었습니다.');
-    navigate(-1);
   }
 
   return (

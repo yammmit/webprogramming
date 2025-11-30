@@ -3,7 +3,11 @@ import {
   createTask,
   updateTask,
   getGroupTasks,
-  getTodayTasks,
+  getTaskById,
+  assignTask,
+  completeTask,
+  getTaskEvaluations,
+  createTaskEvaluation,
 } from "../controllers/task.controller.js";
 
 import { verifyToken } from "../middlewares/auth.js";
@@ -19,7 +23,17 @@ router.get("/groups/:groupId/tasks", verifyToken, getGroupTasks);
 // Task 업데이트(isDone 변경)
 router.patch("/tasks/:taskId", verifyToken, updateTask);
 
-// 오늘의 Task
-router.get("/tasks/today", verifyToken, getTodayTasks);
+// Assign task
+router.post("/tasks/:taskId/assign", verifyToken, assignTask);
+
+// Complete task
+router.post("/tasks/:taskId/complete", verifyToken, completeTask);
+
+// Get single task
+router.get("/tasks/:taskId", verifyToken, getTaskById);
+
+// Evaluations
+router.get("/tasks/:taskId/evaluations", verifyToken, getTaskEvaluations);
+router.post("/tasks/:taskId/evaluations", verifyToken, createTaskEvaluation);
 
 export default router;
