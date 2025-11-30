@@ -44,3 +44,31 @@ export const updateMyProfile = async (req, res) => {
     return res.status(500).json({ error: "Failed to update profile" });
   }
 };
+
+// GET /users/search
+export const searchUsers = async (req, res) => {
+  try {
+    const q = (req.query.query || req.query.q || "").toString().trim();
+    if (!q || q.length < 1) return res.json({ users: [] });
+
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { user_email: { contains: q } },
+          { user_name: { contains: q } },
+        ],
+      },
+      select: {
+        user_id: true,
+        user_name: true,
+        user_email: true,
+      },
+      take: 20,
+    });
+
+    return res.json({ users });
+  } catch (err) {
+    console.error('searchUsers error:', err);
+    return res.status(500).json({ error: 'Failed to search users' });
+  }
+};

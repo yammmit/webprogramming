@@ -5,11 +5,16 @@ import {
   getGroupMembers,
   createInvitation,
   leaveGroup,
+  getMyGroups,
+  transferOwnership,
 } from "../controllers/group.controller.js";
 
 import { verifyToken } from "../middlewares/auth.js";
 
 const router = Router();
+
+// My groups
+router.get("/", verifyToken, getMyGroups);
 
 // 그룹 생성
 router.post("/", verifyToken, createGroup);
@@ -22,6 +27,9 @@ router.get("/:groupId/members", verifyToken, getGroupMembers);
 
 // 초대 생성
 router.post("/:groupId/invite", verifyToken, createInvitation);
+
+// 그룹 소유권 이전
+router.post("/:groupId/transfer-owner", verifyToken, transferOwnership);
 
 // 그룹 나가기
 router.delete("/:groupId/leave", verifyToken, leaveGroup);

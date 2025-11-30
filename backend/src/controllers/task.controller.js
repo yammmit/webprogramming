@@ -50,8 +50,11 @@ export const getGroupTasks = async (req, res) => {
     const groupId = Number(req.params.groupId);
 
     const tasks = await prisma.task.findMany({
-      where: { groupId },
-      orderBy: { createdAt: "desc" },
+      where: { group_id: groupId },
+      include: {
+        assignedTo: true,
+        creator: true,
+      },
     });
 
     return res.json({ tasks });
