@@ -8,6 +8,7 @@ import {
   getMyGroups,
   transferOwnership,
 } from "../controllers/group.controller.js";
+import { createTask } from "../controllers/task.controller.js";
 
 import { verifyToken } from "../middlewares/auth.js";
 
@@ -27,6 +28,9 @@ router.get("/:groupId/members", verifyToken, getGroupMembers);
 
 // 초대 생성
 router.post("/:groupId/invite", verifyToken, createInvitation);
+
+// create task
+router.post("/:groupId/tasks", verifyToken, createTask);
 
 // 그룹 소유권 이전
 router.post("/:groupId/transfer-owner", verifyToken, transferOwnership);

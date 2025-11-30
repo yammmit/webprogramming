@@ -5,21 +5,30 @@ const prisma = new PrismaClient();
 export const createTask = async (req, res) => {
   try {
     const groupId = Number(req.params.groupId);
-    const { title, description, assignedTo, dueDate } = req.body;
+    const creatorId = Number(req.user?.sub);
+    if (!creatorId) return res.status(401).json({ error: "Unauthorized" });
 
-    if (!title) return res.status(400).json({ error: "Title is required" });
+    const { title, description, difficulty, frequency_type, weekday_mask } = req.body || {};
+    if (!title || !String(title).trim()) return res.status(400).json({ error: "Title required" });
+
+    const group = await prisma.group.findUnique({ where: { group_id: groupId } });
+    if (!group) return res.status(404).json({ error: "Group not found" });
 
     const task = await prisma.task.create({
       data: {
-        groupId,
-        title,
-        description,
-        assignedTo: assignedTo ?? null,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        title: String(title).trim(),
+        description: description ?? null,
+        difficulty: Number(difficulty) || 1,
+        frequency_type: frequency_type ?? null,
+        weekday_mask: weekday_mask ?? null,
+        created_at: new Date(),
+        group_id: groupId,
+        // creator relation omitted: some Prisma schemas use a scalar field or different relation name
+        // If you have a creator_id scalar field, change to creator_id: creatorId
       },
     });
 
-    return res.json({ task });
+    return res.status(201).json({ task });
   } catch (err) {
     console.error("createTask error:", err);
     return res.status(500).json({ error: "Failed to create task" });
