@@ -190,47 +190,47 @@ export default function TaskDetail() {
                 <div style={{ color: '#666', marginBottom: 16 }}>집안일을 완료 처리하면 작업이 완료 상태로 변경됩니다.</div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button onClick={() => setShowConfirm(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff' }}>취소</button>
-                  <button onClick={async () => {
-                    // mark as completed in mock DB
-                    try {
-                      // update mock db task status
-                      const dbTask = db.tasks.find((x) => String(x.task_id) === String(taskId));
-                      if (dbTask) dbTask.status = 'completed';
-
-                      // add completion history entry
-                      const newCompletionId = counters.completionId++;
-                      const newAssignmentId = counters.assignmentId++;
-                      db.taskHistory.push({ task_completion_id: newCompletionId, assignment_id: newAssignmentId, task_id: Number(taskId), completed_at: new Date().toISOString(), completed_by: currentUserId || null });
-
-                      // set local state
-                      setTask(prev => ({ ...prev, status: 'completed' }));
-                      setHistory([]);
-                    } catch (e) {
-                      console.error('mock update failed', e);
-                    }
-                    setShowConfirm(false);
-                    setShowShare(true);
-                  }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#DF6437', color: '#fff' }}>완료</button>
+                  <button
+                    onClick={async () => {
+                      let success = false;
+                      try {
+                        if (!USE_MOCK) {
+                          const res = await axiosInstance.post(`/tasks/${taskId}/complete`);
+                          if (res.status === 201 || res.status === 200) {
+                            success = true;
+                          } else {
+                            console.error('complete task failed', res.data);
+                          }
+                        } else {
+                          const dbTask = db.tasks.find((x) => String(x.task_id) === String(taskId));
+                          if (dbTask) dbTask.status = 'completed';
+                          const newCompletionId = counters.completionId++;
+                          const newAssignmentId = counters.assignmentId++;
+                          db.taskHistory.push({ task_completion_id: newCompletionId, assignment_id: newAssignmentId, task_id: Number(taskId), completed_at: new Date().toISOString(), completed_by: currentUserId || null });
+                          setTask(prev => ({ ...prev, status: 'completed' }));
+                          setHistory([]);
+                          success = true;
+                        }
+                      } catch (e) {
+                        console.error('complete failed', e);
+                        alert(e.response?.data?.error || '완료 처리 중 오류가 발생했습니다');
+                      }
+                      if (success) {
+                        setShowConfirm(false);
+                        setShowShare(true);
+                      } else {
+                        setShowConfirm(false);
+                      }
+                    }}
+                    style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#DF6437', color: '#fff' }}
+                  >
+                    완료
+                  </button>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Share modal */}
-          {showShare && (
-            <div style={{ position: 'absolute', left: 18, right: 18, bottom: 78, zIndex: 1300, background: '#fff', borderRadius: 12, padding: 18, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}>
-               <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>짝짝짝!</div>
-               <div style={{ fontSize: 16, marginBottom: 6 }}><strong>{task.title}</strong>를 완료했습니다.</div>
-               <div style={{ color: '#666', marginBottom: 12 }}>룸메이트들에게 공유할까요?</div>
-
-               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                 <button style={{ width: 56, height: 56, borderRadius: 10, border: '1px solid #DF6437', background: '#fff' }}>📷</button>
-                <button onClick={() => { setShowShare(false); navigate('/main/dashboard'); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: '1px solid #DF6437', background: '#fff', color: '#DF6437' }}>메인으로</button>
-                <button onClick={() => { alert('공유되었습니다!'); setShowShare(false); }} style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: 'none', background: '#DF6437', color: '#fff' }}>공유하기</button>
-               </div>
-             </div>
-           )}
-         </div>
+        </div>
       </div>
     </MainLayout>
   );
