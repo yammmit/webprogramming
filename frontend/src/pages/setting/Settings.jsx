@@ -1,112 +1,212 @@
 import { useEffect, useState } from "react";
-import { fetchMyGroups } from "../../api/groups";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
+import { fetchMyGroups } from "../../api/groups";
+
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
-  const [selected, setSelected] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selectedGroupId, setSelectedGroupId] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("currentGroupId") || localStorage.getItem("group_id") || null;
+  });
+  const [pushEnabled, setPushEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("pushEnabled") !== "false";
+  });
+  const [groupMembers, setGroupMembers] = useState([]);
 
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  async function loadGroups() {
+  // resolve user display name from localStorage
+  let storedUser = null;
+  if (typeof window !== 'undefined') {
     try {
-      setLoading(true);
-      const gs = (await fetchMyGroups()) || [];
-      setGroups(gs);
-
-      // determine initial selection: localStorage.currentGroupId -> most-recently-joined -> first
-      let initial = null;
-      const stored = typeof window !== "undefined" ? (localStorage.getItem("currentGroupId") || localStorage.getItem("group_id")) : null;
-
-      if (stored) {
-        const found = gs.find((g) => String(g.group_id) === String(stored));
-        if (found) initial = String(found.group_id);
-      }
-
-      if (!initial && gs.length > 0) {
-        // try pick most-recently-joined for current user
-        let uid = null;
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("user");
-            if (raw) uid = JSON.parse(raw)?.user_id;
-          } catch (e) {
-            // ignore
-          }
-          if (!uid) uid = localStorage.getItem("user_id") || localStorage.getItem("userId");
-        }
-
-        if (uid != null) {
-          let best = null;
-          let bestTime = 0;
-          for (const g of gs) {
-            const member = Array.isArray(g.members) ? g.members.find((m) => String(m.user_id) === String(uid)) : null;
-            if (member && member.joined_at) {
-              const t = new Date(member.joined_at).getTime();
-              if (best === null || t > bestTime) {
-                best = g;
-                bestTime = t;
-              }
-            }
-          }
-          if (best) initial = String(best.group_id);
-        }
-      }
-
-      if (!initial && gs.length > 0) initial = String(gs[0].group_id);
-
-      if (initial) {
-        setSelected(initial);
-        try {
-          localStorage.setItem("currentGroupId", initial);
-        } catch (e) {
-          // ignore
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load groups:", e);
-    } finally {
-      setLoading(false);
-    }
+      const raw = localStorage.getItem('user');
+      if (raw) storedUser = JSON.parse(raw);
+    } catch (e) {}
   }
 
-  function handleChange(e) {
-    const v = e.target.value;
-    setSelected(v);
-    try {
-      localStorage.setItem("currentGroupId", v);
-    } catch (e) {
-      // ignore
+  const user_name = (storedUser && (storedUser.user_name || storedUser.name)) || (typeof window !== 'undefined' && localStorage.getItem('user_name')) || '사용자';
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const g = await fetchMyGroups();
+        setGroups(g || []);
+      } catch (e) {
+        console.error("Failed to load groups", e);
+      }
     }
+    load();
+  }, []);
+
+  // load members for selectedGroupId when it changes
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMembers() {
+      if (!selectedGroupId) {
+        setGroupMembers([]);
+        return;
+      }
+
+      // try to read from loaded groups first
+      const g = (groups || []).find((x) => String(x.group_id) === String(selectedGroupId));
+      if (g && Array.isArray(g.members) && g.members.length > 0) {
+        setGroupMembers(g.members);
+        return;
+      }
+
+      // fallback: fetch group detail
+      try {
+        const res = await fetch(`/groups/${selectedGroupId}`);
+        if (!res.ok) {
+          setGroupMembers([]);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setGroupMembers(data.members || []);
+      } catch (e) {
+        console.error('Failed to load group detail', e);
+        if (!cancelled) setGroupMembers([]);
+      }
+    }
+    loadMembers();
+    return () => { cancelled = true; };
+  }, [selectedGroupId, groups]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        if (selectedGroupId == null) localStorage.removeItem("currentGroupId");
+        else localStorage.setItem("currentGroupId", String(selectedGroupId));
+      }
+    } catch (e) {}
+  }, [selectedGroupId]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") localStorage.setItem("pushEnabled", pushEnabled ? "true" : "false");
+    } catch (e) {}
+  }, [pushEnabled]);
+
+  function handleGroupChange(e) {
+    setSelectedGroupId(e.target.value);
   }
 
   return (
     <MainLayout>
-      <div style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>설정</h2>
-
-        <section style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600 }}>내 단체방 선택</label>
-
-          {loading ? (
-            <div>불러오는 중...</div>
-          ) : groups.length === 0 ? (
-            <div>가입된 단체방이 없습니다.</div>
-          ) : (
-            <select value={selected} onChange={handleChange} style={{ padding: 8, borderRadius: 8, minWidth: 240 }}>
-              {groups.map((g) => (
-                <option key={g.group_id} value={g.group_id}>{g.group_name}</option>
-              ))}
-            </select>
-          )}
-
-          <div style={{ marginTop: 8, color: '#666', fontSize: 13 }}>
-            선택하면 대시보드와 하단 메뉴가 해당 그룹을 기준으로 표시됩니다.
+      <div style={{ padding: 0 }}>
+        <div style={{ background: '#DF6437', padding: '18px 16px', color: '#fff', borderRadius: '0 0 12px 12px', boxShadow: '0 6px 18px rgba(223,100,55,0.12)' }}>
+          <div style={{ maxWidth: 640, margin: '0 auto' }}>
+            <h2 style={{ margin: 0, fontSize: 20 }}>설정</h2>
           </div>
-        </section>
+        </div>
+
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: 16 }}>
+          {/* Group select card */}
+          <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 6px 18px rgba(0,0,0,0.06)", marginTop: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>단체방 선택</div>
+              <select value={selectedGroupId ?? ""} onChange={handleGroupChange} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e6e6e6" }}>
+                <option value="">선택된 방이 없습니다</option>
+                {groups.map((g) => (
+                  <option key={g.group_id} value={g.group_id}>{g.group_name}</option>
+                ))}
+              </select>
+
+              {/* display selected group name and members (3 per line) */}
+              {selectedGroupId && (
+                <div style={{ marginTop: 8 }}>
+                  {(() => {
+                    const grp = groups.find(x => String(x.group_id) === String(selectedGroupId));
+                    const groupName = grp?.group_name || '선택된 방';
+                    const total = groupMembers.length;
+                    const maxShow = 4;
+                    const show = groupMembers.slice(0, maxShow).map(m => m.user_name || m.name || m.userName || '이름없음');
+                    const remainder = Math.max(0, total - maxShow);
+                    const namesStr = show.join(','); // no spaces
+                    return (
+                      <>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#333', marginBottom: 6 }}>{`${groupName} (총 ${total}명)`}</div>
+                        {total === 0 ? (
+                          <div style={{ color: '#888' }}>멤버가 없습니다</div>
+                        ) : (
+                          <div style={{ fontSize: 13, color: '#555' }}>
+                            {namesStr}{remainder > 0 ? ` +${remainder}명` : ''}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Options list */}
+          <div style={{ marginTop: 18, background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 6px 18px rgba(0,0,0,0.06)" }}>
+            <button
+              onClick={() => navigate("/settings/profile")}
+              style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: 16 }}>프로필 수정</div>
+              <div style={{ color: "#999" }}>{">"}</div>
+            </button>
+
+            <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
+
+            <button
+              onClick={() => navigate("/settings/password")}
+              style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: 16 }}>비밀번호 변경</div>
+              <div style={{ color: "#999" }}>{">"}</div>
+            </button>
+
+            <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
+
+            <div style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 16 }}>푸시 알림</div>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <input type="checkbox" checked={pushEnabled} onChange={() => setPushEnabled((v) => !v)} />
+              </label>
+            </div>
+
+            <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
+
+            <button
+              onClick={() => navigate("/settings/groups")}
+              style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: 16 }}>그룹 설정</div>
+              <div style={{ color: "#999" }}>{">"}</div>
+            </button>
+
+            <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
+
+            <button
+              onClick={() => {
+                try {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('user_id');
+                    localStorage.removeItem('currentGroupId');
+                    localStorage.removeItem('pushEnabled');
+                    // any other auth keys
+                  }
+                } catch (e) {}
+                navigate('/auth');
+              }}
+              style={{ display: 'flex', width: '100%', padding: 16, alignItems: 'center', justifyContent: 'space-between', border: 'none', background: 'transparent', cursor: 'pointer' }}
+            >
+              <div style={{ fontSize: 16, color: '#DF6437', fontWeight: 700 }}>로그아웃</div>
+              <div style={{ color: '#999' }}>{'>'}</div>
+            </button>
+          </div>
+        </div>
+
+        <div style={{ height: 80 }} />
       </div>
     </MainLayout>
   );

@@ -12,6 +12,8 @@ export const db = {
     {
       group_id: 10,
       group_name: "우리집",
+      // role for the current mock user (user_id 1) — convenience field
+      role: 'owner',
       members: [
         { user_id: 1, user_name: "홍길동", role: "owner", joined_at: "2025-11-01T10:00:00Z" },
         { user_id: 2, user_name: "테스터", role: "member", joined_at: "2025-11-02T10:00:00Z" },
@@ -21,9 +23,11 @@ export const db = {
     {
       group_id: 11,
       group_name: "동기넷",
+      // current mock user (user_id 1) role in this group
+      role: 'member',
       members: [
-        { user_id: 1, user_name: "홍길동", role: "owner", joined_at: "2025-11-28T12:00:00Z" },
-        { user_id: 4, user_name: "수빈", role: "member", joined_at: "2025-11-25T10:00:00Z" }
+        { user_id: 1, user_name: "홍길동", role: "member", joined_at: "2025-11-28T12:00:00Z" },
+        { user_id: 4, user_name: "수빈", role: "owner", joined_at: "2025-11-25T10:00:00Z" }
       ]
     }
   ],

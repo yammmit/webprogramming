@@ -15,6 +15,10 @@ import Chores from './pages/chores/Chores';
 import AssignRequest from './pages/chores/AssignRequest';
 import CreateChores from './pages/chores/CreateChores';
 import ReviewChore from './pages/chores/ReviewChore';
+import GroupSettings from "./pages/setting/GroupSettings";
+import CreateGroup from "./pages/setting/CreateGroup";
+import GroupManage from "./pages/setting/GroupManage";
+import GroupSpecific from './pages/setting/GroupSpecific';
 
 function App() {
   return (
@@ -30,7 +34,10 @@ function App() {
       <Route path="/chores/review/:taskId" element={<ReviewChore />} />
       <Route path="/main/chores/:groupId" element={<Chores />} />
       <Route path="/settings" element={<Settings />} />
-      
+      <Route path="/settings/groups" element={<GroupSettings />} />
+      <Route path="/settings/groups/create" element={<CreateGroup />} />
+      <Route path="/settings/groups/manage" element={<GroupManage />} />
+      <Route path="/settings/groups/:groupId" element={<GroupSpecific />} />
     </Routes>
   )
 }
