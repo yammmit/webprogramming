@@ -72,21 +72,22 @@ export default function AssignedRequest() {
         <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}>
           <div style={{ width: 48, height: 6, background: '#e6e6e6', borderRadius: 4, margin: '0 auto 12px' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
-              <div style={{ marginTop: 8 }}>
-                <StarRating value={task.difficulty} editable={false} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 12 }}>
+            <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <StarRating value={Number(task.difficulty) || 0} editable={false} />
+                </div>
               </div>
+
               {isAssigned && (
-                <div style={{ marginTop: 8, color: '#666', fontSize: 14 }}>배정자: {assignedUser ? assignedUser.user_name : '알 수 없음'}</div>
+                <div style={{ marginTop: 8, color: '#666', textAlign: 'left',fontSize: 14 }}>배정자: {assignedUser ? assignedUser.user_name : '알 수 없음'}</div>
               )}
             </div>
-
-            <div style={{ width: 80 }} />
           </div>
 
-          <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
+          <p style={{ marginTop: 12, color: '#555', textAlign: 'left' }}>{task.description || '설명이 없습니다.'}</p>
 
           {/* no history shown for assigned request */}
 
