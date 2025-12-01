@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import StarRating from '../../components/ui/StarRating';
-import { db } from '../../mocks/db';
 import api from '../../api/axiosInstance';
 import Vcharacter from "../../assets/images/Vaccum_Character.png";
 
@@ -19,14 +18,12 @@ export default function AssignedRequest() {
     async function load() {
       setLoading(true);
       try {
-        // try backend first
         const res = await api.get(`/tasks/${taskId}`);
         const t = res.data?.task || res.data;
         if (!cancelled) setTask(t || null);
       } catch (err) {
-        console.warn('Failed to load task from backend, falling back to mock', err?.message || err);
-        const t = db.tasks.find(x => String(x.task_id) === String(taskId));
-        if (!cancelled) setTask(t || null);
+        console.error('Failed to load task from backend', err?.message || err);
+        if (!cancelled) setTask(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -38,8 +35,10 @@ export default function AssignedRequest() {
   if (loading) return <MainLayout>불러오는 중...</MainLayout>;
   if (!task) return <MainLayout>해당 집안일을 찾을 수 없습니다.</MainLayout>;
 
-  const isAssigned = task.assigned_to != null;
-  const assignedUser = isAssigned ? db.users.find(u => u.user_id === task.assigned_to) : null;
+  // determine assignment info from backend-provided assignments (latest first)
+  const latestAssignment = task?.assignments?.length ? task.assignments[0] : null;
+  const isAssigned = !!latestAssignment && latestAssignment.status === 'assigned';
+  const assignedUser = latestAssignment?.assignedTo || null;
 
   async function applyAssignment() {
     const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -73,21 +72,22 @@ export default function AssignedRequest() {
         <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', marginTop: -32, padding: 20, boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}>
           <div style={{ width: 48, height: 6, background: '#e6e6e6', borderRadius: 4, margin: '0 auto 12px' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
-              <div style={{ marginTop: 8 }}>
-                <StarRating value={task.difficulty} editable={false} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 12 }}>
+            <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <StarRating value={Number(task.difficulty) || 0} editable={false} />
+                </div>
               </div>
+
               {isAssigned && (
-                <div style={{ marginTop: 8, color: '#666', fontSize: 14 }}>배정자: {assignedUser ? assignedUser.user_name : '알 수 없음'}</div>
+                <div style={{ marginTop: 8, color: '#666', textAlign: 'left',fontSize: 14 }}>배정자: {assignedUser ? assignedUser.user_name : '알 수 없음'}</div>
               )}
             </div>
-
-            <div style={{ width: 80 }} />
           </div>
 
-          <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
+          <p style={{ marginTop: 12, color: '#555', textAlign: 'left' }}>{task.description || '설명이 없습니다.'}</p>
 
           {/* no history shown for assigned request */}
 

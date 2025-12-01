@@ -8,6 +8,8 @@ import {
   completeTask,
   getTaskEvaluations,
   createTaskEvaluation,
+  getTaskHistory,
+  getGroupHistory,
 } from "../controllers/task.controller.js";
 
 import { verifyToken } from "../middlewares/auth.js";
@@ -35,5 +37,7 @@ router.get("/tasks/:taskId", verifyToken, getTaskById);
 // Evaluations
 router.get("/tasks/:taskId/evaluations", verifyToken, getTaskEvaluations);
 router.post("/tasks/:taskId/evaluations", verifyToken, createTaskEvaluation);
+router.get("/tasks/:taskId/history", verifyToken, getTaskHistory);
+router.get("/groups/:groupId/history", verifyToken, getGroupHistory);
 
 export default router;

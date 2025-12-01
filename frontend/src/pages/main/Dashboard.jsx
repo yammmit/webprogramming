@@ -68,25 +68,35 @@ export default function Dashboard() {
       setLoading(true);
 
       const groups = await fetchMyGroups();
-
       if (!Array.isArray(groups) || groups.length === 0) {
         setTasks([]);
+        setGroup(null);
         setLoading(false);
         return;
       }
 
-      // fetch tasks for all groups the user belongs to and attach group metadata
-      const taskPromises = groups.map(async (g) => {
-        const list = await fetchTasksByGroup(g.group_id);
-        return (list || []).map((t) => ({ ...t, group_id: g.group_id, group_name: g.group_name }));
-      });
+      // determine selected group from localStorage
+      const storedGroupId = (typeof window !== 'undefined') ? (localStorage.getItem('currentGroupId') || localStorage.getItem('group_id')) : null;
+      if (!storedGroupId) {
+        // no selected group -> show nothing
+        setTasks([]);
+        setGroup(null);
+        setLoading(false);
+        return;
+      }
 
-      const lists = await Promise.all(taskPromises);
-      const allTasks = lists.flat();
+      const selectedGroup = groups.find((g) => String(g.group_id) === String(storedGroupId));
+      if (!selectedGroup) {
+        setTasks([]);
+        setGroup(null);
+        setLoading(false);
+        return;
+      }
 
-      setTasks(allTasks);
-      // leave group state null since dashboard is aggregated across all groups
-      setGroup(null);
+      setGroup(selectedGroup);
+      const taskList = await fetchTasksByGroup(selectedGroup.group_id);
+      console.log('Dashboard loaded tasks for group', selectedGroup.group_id, taskList);
+      setTasks((taskList || []).map(t => ({ ...t, group_name: selectedGroup.group_name })));
     } catch (e) {
       console.error("대시보드 로딩 실패:", e);
       if (e?.code === "ERR_NETWORK" || e?.message?.includes("Network Error")) {
