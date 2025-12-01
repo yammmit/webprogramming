@@ -1,4 +1,3 @@
-import StarRating from './StarRating';
 import { db } from '../../mocks/db';
 
 export default function TaskEvaluation({ evaluations = [] }) {
@@ -33,8 +32,8 @@ export default function TaskEvaluation({ evaluations = [] }) {
 
               <div style={{ marginTop: 6, color: '#333', fontSize: 13, display: 'flex', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>{ev.comment}</div>
-                <div style={{ marginLeft: 12 }}>
-                  <StarRating value={ev.rating || 0} editable={false} />
+                <div style={{ marginLeft: 12, fontWeight: 800, color: '#DF6437' }}>
+                  평점: {Number(ev.rating)}
                 </div>
               </div>
             </div>

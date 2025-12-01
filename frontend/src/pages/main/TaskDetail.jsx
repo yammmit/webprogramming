@@ -75,6 +75,11 @@ export default function TaskDetail() {
     load();
   }, [taskId]);
 
+  // compute average rating for evaluations
+  const avgRating = (Array.isArray(taskEvaluations) && taskEvaluations.length > 0)
+    ? (taskEvaluations.reduce((s, e) => s + (Number(e.rating) || 0), 0) / taskEvaluations.length)
+    : null;
+
   if (loading) return <MainLayout>불러오는 중...</MainLayout>;
   if (error) return <MainLayout>에러: {String(error)}</MainLayout>;
   if (!task) return <MainLayout>해당 집안일을 찾을 수 없습니다.</MainLayout>;
@@ -108,7 +113,7 @@ export default function TaskDetail() {
               <div style={{ width: 80 }} />
             </div>
 
-            <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
+            <p style={{ marginTop: 12, color: '#555', textAlign: 'left', width: '100%' }}>{task.description || '설명이 없습니다.'}</p>
 
             {task.status !== 'completed' && (
               <>
@@ -166,7 +171,9 @@ export default function TaskDetail() {
             {/* 동료평가: show evaluations for this task (if any) when viewing a completed task */}
             {task.status === 'completed' && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>동료평가</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 8, fontWeight: 700, marginBottom: 8 }}>
+                  <div>동료평가{avgRating !== null ? ` (${avgRating.toFixed(2)})` : ''}</div>
+                </div>
                 {taskEvaluations.length === 0 ? (
                   <p style={{ color: '#888' }}>아직 동료평가가 없습니다.</p>
                 ) : (
