@@ -103,14 +103,10 @@ export default function TaskDetail() {
           {/* scrollable content area */}
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
-                <div style={{ marginTop: 8 }}>
-                  <StarRating value={task.difficulty} editable={false} />
-                </div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>{task.title}</div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <StarRating value={task.difficulty} editable={false} />
               </div>
-
-              <div style={{ width: 80 }} />
             </div>
 
             <p style={{ marginTop: 12, color: '#555', textAlign: 'left', width: '100%' }}>{task.description || '설명이 없습니다.'}</p>
