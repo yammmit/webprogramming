@@ -114,6 +114,9 @@ export const getTaskById = async (req, res) => {
       status: latest ? latest.status : 'unassigned',
       assignments: t.assignments || [],
     };
+
+    console.log('getTaskById - difficulty:', t.difficulty, 'typeof:', typeof t.difficulty, 'task_id:', t.task_id);
+
     return res.json({ task });
   } catch (err) {
     console.error('getTaskById error:', err);
@@ -300,6 +303,7 @@ export const getTaskHistory = async (req, res) => {
       task_completion_id: c.task_completion_id,
       assignment_id: c.assignment_id,
       task_id: c.assignment?.task?.task_id || taskId,
+      difficulty: c.assignment?.task?.difficulty ?? null,
       completed_at: c.completed_at,
       completed_by: c.completed_by,
       user_name: c.completedBy?.user_name || null,
@@ -334,6 +338,7 @@ export const getGroupHistory = async (req, res) => {
       assignment_id: c.assignment_id,
       task_id: c.assignment?.task?.task_id || null,
       task_title: c.assignment?.task?.title || null,
+      difficulty: c.assignment?.task?.difficulty ?? null,
       completed_at: c.completed_at,
       completed_by: c.completed_by,
       user_name: c.completedBy?.user_name || null,
