@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import StarRating from '../../components/ui/StarRating';
-import { db } from '../../mocks/db';
 import api from '../../api/axiosInstance';
 import Vcharacter from "../../assets/images/Vaccum_Character.png";
 
@@ -19,14 +18,12 @@ export default function AssignedRequest() {
     async function load() {
       setLoading(true);
       try {
-        // try backend first
         const res = await api.get(`/tasks/${taskId}`);
         const t = res.data?.task || res.data;
         if (!cancelled) setTask(t || null);
       } catch (err) {
-        console.warn('Failed to load task from backend, falling back to mock', err?.message || err);
-        const t = db.tasks.find(x => String(x.task_id) === String(taskId));
-        if (!cancelled) setTask(t || null);
+        console.error('Failed to load task from backend', err?.message || err);
+        if (!cancelled) setTask(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -38,8 +35,10 @@ export default function AssignedRequest() {
   if (loading) return <MainLayout>불러오는 중...</MainLayout>;
   if (!task) return <MainLayout>해당 집안일을 찾을 수 없습니다.</MainLayout>;
 
-  const isAssigned = task.assigned_to != null;
-  const assignedUser = isAssigned ? db.users.find(u => u.user_id === task.assigned_to) : null;
+  // determine assignment info from backend-provided assignments (latest first)
+  const latestAssignment = task?.assignments?.length ? task.assignments[0] : null;
+  const isAssigned = !!latestAssignment && latestAssignment.status === 'assigned';
+  const assignedUser = latestAssignment?.assignedTo || null;
 
   async function applyAssignment() {
     const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
