@@ -115,8 +115,6 @@ export const getTaskById = async (req, res) => {
       assignments: t.assignments || [],
     };
 
-    console.log('getTaskById - difficulty:', t.difficulty, 'typeof:', typeof t.difficulty, 'task_id:', t.task_id);
-
     return res.json({ task });
   } catch (err) {
     console.error('getTaskById error:', err);
