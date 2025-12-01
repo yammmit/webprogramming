@@ -280,3 +280,68 @@ export const createTaskEvaluation = async (req, res) => {
     return res.status(500).json({ error: 'Failed to create evaluation' });
   }
 };
+
+// Get completion history for a task (task completions across assignments)
+export const getTaskHistory = async (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+
+    // find completions for assignments that belong to this task
+    const completions = await prisma.taskCompletion.findMany({
+      where: { assignment: { task: { task_id: taskId } } },
+      include: {
+        assignment: { include: { task: true } },
+        completedBy: true,
+      },
+      orderBy: { completed_at: 'desc' },
+    });
+
+    const out = completions.map((c) => ({
+      task_completion_id: c.task_completion_id,
+      assignment_id: c.assignment_id,
+      task_id: c.assignment?.task?.task_id || taskId,
+      completed_at: c.completed_at,
+      completed_by: c.completed_by,
+      user_name: c.completedBy?.user_name || null,
+      task_title: c.assignment?.task?.title || null,
+    }));
+
+    return res.json(out);
+  } catch (err) {
+    console.error('getTaskHistory error:', err);
+    return res.status(500).json({ error: 'Failed to load task history' });
+  }
+};
+
+// Get group-wide completion history (latest N)
+export const getGroupHistory = async (req, res) => {
+  try {
+    const groupId = Number(req.params.groupId);
+    const limit = Number(req.query.limit || 5);
+
+    const completions = await prisma.taskCompletion.findMany({
+      where: { assignment: { task: { group_id: groupId } } },
+      include: {
+        assignment: { include: { task: true } },
+        completedBy: true,
+      },
+      orderBy: { completed_at: 'desc' },
+      take: limit,
+    });
+
+    const out = completions.map((c) => ({
+      task_completion_id: c.task_completion_id,
+      assignment_id: c.assignment_id,
+      task_id: c.assignment?.task?.task_id || null,
+      task_title: c.assignment?.task?.title || null,
+      completed_at: c.completed_at,
+      completed_by: c.completed_by,
+      user_name: c.completedBy?.user_name || null,
+    }));
+
+    return res.json(out);
+  } catch (err) {
+    console.error('getGroupHistory error:', err);
+    return res.status(500).json({ error: 'Failed to load group history' });
+  }
+};
