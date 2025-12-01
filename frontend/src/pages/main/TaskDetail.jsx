@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance, { USE_MOCK } from "../../api/axiosInstance";
-import { db, counters } from "../../mocks/db";
+import axiosInstance from "../../api/axiosInstance";
 import MainLayout from "../../components/layout/MainLayout";
 import StarRating from "../../components/ui/StarRating";
 import CompletionItem from '../../components/ui/TaskDone';
@@ -36,75 +35,37 @@ export default function TaskDetail() {
       setLoading(true);
       setError(null);
 
-      // Try network first
-      if (!USE_MOCK) {
-        try {
-          const res = await axiosInstance.get(`/tasks/${taskId}`);
-          const t = res.data;
-          setTask(t);
-
-          // try to load history
-          if (t.status !== 'completed') {
-            try {
-              const h = await axiosInstance.get(`/tasks/${taskId}/history`);
-              setHistory(h.data);
-            } catch (e) {
-              // ignore, fallback to mock
-            }
-          } else {
-            // hide history for completed tasks
-            setHistory([]);
-          }
-
-          // try to load evaluations for this task (network)
-          try {
-            const ev = await axiosInstance.get(`/tasks/${taskId}/evaluations`);
-            setTaskEvaluations(ev.data);
-          } catch (e) {
-            // ignore, will fallback to mock later
-          }
-
-          setLoading(false);
-          return;
-        } catch (e) {
-          console.warn("TaskDetail network fetch failed, falling back to mock", e?.message || e);
-          // fallthrough to mock
-        }
-      }
-
-      // Mock fallback using in-memory db
       try {
-        const t = db.tasks.find((x) => String(x.task_id) === String(taskId));
+        const res = await axiosInstance.get(`/tasks/${taskId}`);
+        console.log('GET /tasks/:id response', res.data);
+        const t = res.data?.task || res.data;
         setTask(t || null);
 
-        let histories = [];
-        if (t && t.status !== 'completed') {
-          // find histories for the whole group (all tasks in the same group), enrich with user and task title
-          const groupId = t?.group_id;
-          const groupTaskIds = db.tasks.filter((tt) => tt.group_id === groupId).map((tt) => tt.task_id);
-
-          histories = db.taskHistory
-            .filter((h) => groupTaskIds.includes(h.task_id))
-            .map((h) => {
-              const user = db.users.find((u) => u.user_id === h.completed_by) || { user_name: '알수없음' };
-              const taskItem = db.tasks.find((td) => td.task_id === h.task_id) || { title: '' };
-              return {
-                ...h,
-                user_name: user.user_name,
-                assignment_id: h.assignment_id,
-                task_title: taskItem.title,
-              };
-            })
-            .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+        // try to load history endpoint if available
+        try {
+          const groupId = t.group_id;
+          if (groupId) {
+            const gh = await axiosInstance.get(`/groups/${groupId}/history?limit=5`);
+            console.log('GET /groups/:id/history response', gh.data);
+            setHistory(Array.isArray(gh.data) ? gh.data : []);
+          } else {
+            setHistory([]);
+          }
+        } catch (e) {
+          setHistory([]);
         }
 
-        // gather evaluations for this task by finding assignment ids in taskHistory
-        const assignmentIds = db.taskHistory.filter(h => h.task_id === Number(taskId)).map(h => h.assignment_id);
-        const evals = db.evaluations.filter(ev => assignmentIds.includes(ev.assignment_id));
-
-        setHistory(histories);
-        setTaskEvaluations(evals);
+        // load evaluations
+        try {
+          const ev = await axiosInstance.get(`/tasks/${taskId}/evaluations`);
+          console.log('GET /tasks/:id/evaluations response', ev.data);
+          const evdata = ev.data?.data || ev.data;
+          setTaskEvaluations(Array.isArray(evdata) ? evdata : []);
+        } catch (e) {
+          setTaskEvaluations([]);
+        }
       } catch (e) {
+        console.error("TaskDetail network fetch failed", e?.message || e);
         setError(e?.message || String(e));
       } finally {
         setLoading(false);
@@ -149,15 +110,56 @@ export default function TaskDetail() {
 
             <p style={{ marginTop: 12, color: '#555' }}>{task.description || '설명이 없습니다.'}</p>
 
-            {history.length > 0 && (
+            {task.status !== 'completed' && (
               <>
                 <h4 style={{ marginTop: 20, marginBottom: 8, fontWeight: 800, textAlign: 'left' }}>지난 기록</h4>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {history.map((h) => (
-                    <CompletionItem key={h.task_completion_id || `${h.assignment_id}-${h.task_id}`} record={h} />
-                  ))}
+                {/* header row for the history list (tighter spacing) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0', marginBottom: 8 }}>
+                  <div style={{ flex: '0 0 90px', fontSize: 12, color: '#666', fontWeight: 700 }}>배정자</div>
+                  <div style={{ flex: '1 1 auto', fontSize: 13, color: '#666', fontWeight: 700, paddingLeft: 8 }}>집안일</div>
+                  <div style={{ flex: '0 0 100px', fontSize: 12, color: '#666', fontWeight: 700, textAlign: 'right' }}>완료 날짜</div>
+                  <div style={{ flex: '0 0 72px', fontSize: 12, color: '#666', fontWeight: 700, textAlign: 'right' }}>난이도</div>
                 </div>
+
+                {history.length === 0 ? (
+                  <div style={{ minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                    아직 기록이 없습니다.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {history.map((h) => {
+                      const rawName = h.user_name || h.completed_by || '알수없음';
+                      const assignedName = (String(rawName).length > 5) ? (String(rawName).slice(0,5) + '...') : rawName;
+                      const rawTitle = h.task_title || h.title || '';
+                      const title = (String(rawTitle).length > 10) ? (String(rawTitle).slice(0,10) + '...') : rawTitle;
+                      // format yyyy/mm/dd
+                      let completedAt = '';
+                      if (h.completed_at) {
+                        const d = new Date(h.completed_at);
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        completedAt = `${yyyy}/${mm}/${dd}`;
+                      }
+                      const difficulty = Number(h?.assignment?.task?.difficulty ?? h.difficulty ?? 0) || 0;
+                      return (
+                        <div key={h.task_completion_id || `${h.assignment_id}-${h.task_id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderRadius: 8, background: '#fff', border: '1px solid #f5f5f5' }}>
+                          <div style={{ flex: '0 0 90px', fontSize: 13, color: '#333' }}>{assignedName}</div>
+                          <div style={{ flex: '1 1 auto', fontSize: 13, color: '#111', fontWeight: 700, paddingLeft: 8 }}>{title}</div>
+                          <div style={{ flex: '0 0 100px', fontSize: 12, color: '#666', textAlign: 'right' }}>{completedAt}</div>
+                          <div style={{ flex: '0 0 72px', textAlign: 'right' }}>
+                            <span style={{ fontSize: 14, lineHeight: 1 }}>
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <span key={i} style={{ display: 'inline-block', width: 12, textAlign: 'center', color: i < difficulty ? '#DF6437' : '#E0E0E0' }}>★</span>
+                              ))}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
 
@@ -192,33 +194,21 @@ export default function TaskDetail() {
                   <button onClick={() => setShowConfirm(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff' }}>취소</button>
                   <button
                     onClick={async () => {
-                      let success = false;
                       try {
-                        if (!USE_MOCK) {
-                          const res = await axiosInstance.post(`/tasks/${taskId}/complete`);
-                          if (res.status === 201 || res.status === 200) {
-                            success = true;
-                          } else {
-                            console.error('complete task failed', res.data);
-                          }
-                        } else {
-                          const dbTask = db.tasks.find((x) => String(x.task_id) === String(taskId));
-                          if (dbTask) dbTask.status = 'completed';
-                          const newCompletionId = counters.completionId++;
-                          const newAssignmentId = counters.assignmentId++;
-                          db.taskHistory.push({ task_completion_id: newCompletionId, assignment_id: newAssignmentId, task_id: Number(taskId), completed_at: new Date().toISOString(), completed_by: currentUserId || null });
+                        const res = await axiosInstance.post(`/tasks/${taskId}/complete`);
+                        if (res.status === 201 || res.status === 200) {
                           setTask(prev => ({ ...prev, status: 'completed' }));
                           setHistory([]);
-                          success = true;
+                          setShowConfirm(false);
+                          setShowShare(true);
+                        } else {
+                          console.error('complete task failed', res.data);
+                          alert('완료 처리에 실패했습니다.');
+                          setShowConfirm(false);
                         }
                       } catch (e) {
                         console.error('complete failed', e);
                         alert(e.response?.data?.error || '완료 처리 중 오류가 발생했습니다');
-                      }
-                      if (success) {
-                        setShowConfirm(false);
-                        setShowShare(true);
-                      } else {
                         setShowConfirm(false);
                       }
                     }}
