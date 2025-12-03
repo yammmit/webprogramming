@@ -144,3 +144,13 @@ model TaskEvaluation {
 
   @@unique([assignment_id, evaluator_id])
 }
+
+model LadderVote {
+  ladder_vote_id Int      @id @default(autoincrement())
+  task_id        Int
+  user_id        Int
+  vote           Boolean  @default(true)
+  created_at     DateTime @default(now())
+
+  @@unique([task_id, user_id])
+}
