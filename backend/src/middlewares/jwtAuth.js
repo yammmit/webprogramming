@@ -1,6 +1,12 @@
 import jwt from "jsonwebtoken";
 
 const jwtAuth = (req, res, next) => {
+  // allow public access to auth endpoints (signup/login/ping)
+  const url = req.originalUrl || req.url || '';
+  if (/^\/(api\/)?auth(\/|$)/.test(url)) {
+    return next();
+  }
+
   const header = req.headers.authorization || req.headers.Authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({ error: "No token provided" });

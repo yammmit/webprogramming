@@ -14,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // prefer 'access_token' (app convention), fall back to legacy 'idToken'
-    const token = localStorage.getItem("access_token") || localStorage.getItem("idToken");
+    const token = localStorage.getItem("access_token") || localStorage.getItem("idToken") || localStorage.getItem('token');
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;

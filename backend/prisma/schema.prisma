@@ -153,4 +153,19 @@ model LadderVote {
   created_at     DateTime @default(now())
 
   @@unique([task_id, user_id])
+  @@index([task_id])
+}
+
+model LadderResult {
+  ladder_id    Int      @id @default(autoincrement())
+  task_id      Int
+  group_id     Int
+  participants Json
+  ladder_map   Json
+  result_map   Json
+  bottom_result Json
+  assigned_to  Int
+  created_at   DateTime @default(now())
+
+  @@index([task_id])
 }
