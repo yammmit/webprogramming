@@ -4,8 +4,11 @@ import { verifyToken } from "../middlewares/auth.js";
 
 const router = Router();
 
-router.get("/invitations", verifyToken, getMyInvitations);
-router.post("/invitations/:invitationId/accept", verifyToken, acceptInvitation);
-router.delete("/invitations/:invitationId", verifyToken, deleteInvitation);
+// list invitations (mounted at /invitations)
+router.get("/", verifyToken, getMyInvitations);
+// accept invitation
+router.post("/:invitationId/accept", verifyToken, acceptInvitation);
+// delete (decline) invitation
+router.delete("/:invitationId", verifyToken, deleteInvitation);
 
 export default router;
