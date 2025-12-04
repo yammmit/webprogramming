@@ -9,6 +9,7 @@ export default function LadderResultModal({ visible, result, onClose, onViewTask
   const [localParticipants, setLocalParticipants] = useState(null);
   const [enrichedParticipants, setEnrichedParticipants] = useState(null);
   const [resolvedParticipants, setResolvedParticipants] = useState(null);
+  const [assignedName, setAssignedName] = useState(null);
 
   useEffect(() => {
     if (!visible || !result) return;
@@ -148,6 +149,42 @@ export default function LadderResultModal({ visible, result, onClose, onViewTask
     })();
   }, [visible, result, localParticipants, enrichedParticipants]);
 
+  useEffect(() => {
+    // resolve assigned/winner user name to display exact user name
+    setAssignedName(null);
+    (async () => {
+      try {
+        if (!result) return;
+        // determine candidate id from result.assigned_to or result.winner
+        let candidate = null;
+        if (result.assigned_to) {
+          candidate = typeof result.assigned_to === 'object' ? Number(result.assigned_to.user_id ?? result.assigned_to.id) : Number(result.assigned_to);
+        }
+        if ((!candidate || Number.isNaN(candidate)) && result.winner) {
+          candidate = Number(result.winner.user_id ?? result.winner.id);
+        }
+        if (!candidate || Number.isNaN(candidate)) return;
+
+        // check localParticipants/resolvedParticipants first
+        const lookup = (Array.isArray(localParticipants) ? localParticipants : []).concat(Array.isArray(resolvedParticipants) ? resolvedParticipants : []);
+        const foundLocal = lookup.find(p => Number(p.user_id) === Number(candidate));
+        if (foundLocal) { setAssignedName(foundLocal.user_name ?? foundLocal.name); return; }
+
+        // fetch user info
+        try {
+          const fetched = await fetchUsersByIds([candidate]);
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            const u = fetched[0];
+            setAssignedName(u.user_name || u.name || null);
+            return;
+          }
+        } catch (e) {
+          // ignore
+        }
+      } catch (e) {}
+    })();
+  }, [visible, result, localParticipants, resolvedParticipants]);
+
   if (!visible || !result) return null;
 
   let participants = [];
@@ -226,20 +263,44 @@ export default function LadderResultModal({ visible, result, onClose, onViewTask
     return cur;
   }
 
-  let startIndex;
-  if (result.result_map && typeof result.result_map === 'object') {
-    try {
-      for (const k of Object.keys(result.result_map)) {
-        const end = Number(result.result_map[k]);
-        if (!Number.isNaN(end) && end - 1 === winIdx) { startIndex = Number(k) - 1; break; }
-      }
-    } catch (e) {}
+  // choose target end index (prefer assigned_to or winner id mapped to participant index)
+  let targetEndIndex = -1;
+  const assignedIdForTarget = Number(result.assigned_to?.user_id ?? result.assigned_to ?? NaN);
+  const winnerObjIdForTarget = Number(result.winner?.user_id ?? result.winner?.id ?? NaN);
+  if (!Number.isNaN(assignedIdForTarget)) {
+    const idx = participants.findIndex(p => Number(p.user_id) === assignedIdForTarget);
+    if (idx >= 0) targetEndIndex = idx;
   }
-  if (typeof startIndex === 'undefined' && winIdx >= 0) {
-    for (let s = 0; s < columns; s++) {
-      try { if (simulateEndFromStart(s) === winIdx) { startIndex = s; break; } } catch (e) {}
+  if (targetEndIndex < 0 && !Number.isNaN(winnerObjIdForTarget)) {
+    const idx2 = participants.findIndex(p => Number(p.user_id) === winnerObjIdForTarget);
+    if (idx2 >= 0) targetEndIndex = idx2;
+  }
+  // fallback to server bottom_result index
+  if (targetEndIndex < 0 && winIdx >= 0) targetEndIndex = winIdx;
+
+  // now invert ladder to find a startIndex that leads to targetEndIndex
+  let startIndex;
+  if (targetEndIndex >= 0) {
+    // prefer explicit server result_map inversion if available (result_map uses 1-based indices)
+    if (result.result_map && typeof result.result_map === 'object') {
+      try {
+        for (const k of Object.keys(result.result_map)) {
+          const end = Number(result.result_map[k]);
+          if (!Number.isNaN(end) && end - 1 === targetEndIndex) { startIndex = Number(k) - 1; break; }
+        }
+      } catch (e) {}
+    }
+
+    // brute-force simulate each possible start to find match
+    if (typeof startIndex === 'undefined') {
+      for (let s = 0; s < columns; s++) {
+        try {
+          if (simulateEndFromStart(s) === targetEndIndex) { startIndex = s; break; }
+        } catch (e) {}
+      }
     }
   }
+
   if (typeof startIndex === 'undefined') startIndex = Math.floor((columns - 1) / 2);
 
   let curIndex = startIndex;
@@ -309,15 +370,21 @@ export default function LadderResultModal({ visible, result, onClose, onViewTask
             <path ref={pathRef} d={chosenPath} fill="none" stroke="#DF6437" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
             <circle ref={markerRef} cx={xPositions[startIndex]} cy={topY} r={10} fill="#DF6437" />
 
-            {xPositions.map((x, i) => (
-              <text key={`p-bottom-${i}`} x={x} y={bottomY + 32} textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: '#222' }}>{participants[i]?.user_name || `참여자 ${i+1}`}</text>
-            ))}
+            {xPositions.map((x, i) => {
+              const isWinnerBottom = typeof endIndex === 'number' && i === endIndex;
+              const name = isWinnerBottom ? (assignedName ?? participants[i]?.user_name ?? participants[i]?.name) : (participants[i]?.user_name ?? participants[i]?.name ?? `참여자 ${i+1}`);
+              return (
+                <text key={`p-bottom-${i}`} x={x} y={bottomY + 32} textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: '#222' }}>
+                  {name}
+                </text>
+              );
+            })}
 
           </svg>
         </div>
 
         <div style={{ marginTop: 12, textAlign: 'center' }}>
-          <div style={{ fontWeight: 700 }}>{displayWinnerName ?? '알 수 없음'}</div>
+          <div style={{ fontWeight: 700 }}>{!animating ? (assignedName ?? displayWinnerName ?? '알 수 없음') : ''}</div>
           <div style={{ color: '#666', marginTop: 6 }}>{animating ? '사다리 진행중...' : '배정 완료'}</div>
         </div>
 
