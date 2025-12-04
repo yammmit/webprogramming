@@ -24,7 +24,15 @@ export default function Login() {
       navigate('/main/dashboard');
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || '로그인에 실패했습니다.');
+      const serverMsg = err.response?.data?.error || err.response?.data?.message || '';
+      const genericMsg = '로그인에 실패했습니다.';
+      const credentialPattern = /invalid credential|invalid credentials|비밀번호|password|wrong|회원정보|존재하지|등록된 회원|회원이 없습니다|user not found|not found/i;
+      const isCredIssue = err.response?.status === 401 || err.response?.status === 404 || credentialPattern.test(String(serverMsg));
+      if (isCredIssue) {
+        setError('회원정보를 확인하세요');
+      } else {
+        setError(serverMsg || genericMsg);
+      }
     } finally {
       setLoading(false);
     }
