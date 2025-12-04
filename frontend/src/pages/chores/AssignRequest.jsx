@@ -76,10 +76,16 @@ export default function AssignedRequest() {
       const st = await fetchLadderStatus();
       if (st) {
         const membersCount = Number(st.total_members ?? st.totalMembers ?? totalMembers ?? task?.group?.members?.length ?? 0);
-        // if majority already true, show preview (edge case where threshold was met before this user)
+        // If an assignment already exists on server, show it regardless of majority
+        const hasAssigned = st.status === 'assigned' || Boolean(st.assigned_to) || Boolean(st.winner);
         const hasMajority = Boolean(st.majority || (Number(st.votes || 0) >= Math.ceil(membersCount / 2)));
-        console.log('Ladder status fetched', { st, membersCount, hasMajority });
-        if (hasMajority) {
+        console.log('Ladder status fetched', { st, membersCount, hasMajority, hasAssigned });
+        if (hasAssigned) {
+          // show existing assignment/result from server
+          setLadderResult(st);
+          setShowLadderResult(true);
+        } else if (hasMajority) {
+          // show deterministic preview when majority already met
           const preview = {
             taskId: Number(taskId),
             total_members: membersCount,
