@@ -390,7 +390,6 @@ export default function LadderResultModal({ visible, result, onClose, onViewTask
 
         <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, padding: 10, borderRadius: 8, background: '#fff', border: '1px solid #DF6437', color: '#DF6437' }}>닫기</button>
-          <button onClick={onViewTask} style={{ flex: 1, padding: 10, borderRadius: 8, background: '#DF6437', color: '#fff' }}>작업 보기</button>
         </div>
       </div>
     </div>
