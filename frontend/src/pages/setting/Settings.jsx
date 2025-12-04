@@ -179,7 +179,6 @@ export default function Settings() {
           {/* Options list */}
           <div style={{ marginTop: 18, background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 6px 18px rgba(0,0,0,0.06)" }}>
             <button
-              onClick={() => navigate("/settings/profile")}
               style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
             >
               <div style={{ fontSize: 16 }}>프로필 수정</div>
@@ -189,7 +188,7 @@ export default function Settings() {
             <hr style={{ margin: 0, border: "none", borderTop: "1px solid #f0f0f0" }} />
 
             <button
-              onClick={() => navigate("/settings/password")}
+              
               style={{ display: "flex", width: "100%", padding: 16, alignItems: "center", justifyContent: "space-between", border: "none", background: "transparent", cursor: "pointer" }}
             >
               <div style={{ fontSize: 16 }}>비밀번호 변경</div>

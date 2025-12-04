@@ -209,6 +209,8 @@ export default function AssignedRequest() {
   const latestAssignment = task?.assignments?.length ? task.assignments[0] : null;
   const isAssigned = !!latestAssignment && latestAssignment.status === 'assigned';
   const assignedUser = latestAssignment?.assignedTo || null;
+  // show ladder button when task is unassigned OR when latest assignment used 'ladder' assignment_type
+  const showLadderButton = !isAssigned || (latestAssignment?.assignment_type === 'ladder');
 
   async function applyAssignment() {
     const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -266,9 +268,11 @@ export default function AssignedRequest() {
             { !isAssigned && (
               <button onClick={() => setShowConfirm(true)} style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: 'none', background: '#DF6437', color: '#fff', fontWeight: 700 }}>배정신청</button>
             )}
-            <button onClick={handleVote} disabled={voting} style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>
-              {votes !== null ? `사다리 (${votes}/${totalMembers ?? '-'})` : '사다리 참여'}
-            </button>
+            {showLadderButton && (
+              <button onClick={handleVote} disabled={voting} style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid #DF6437', background: '#fff', color: '#DF6437', fontWeight: 700 }}>
+                {votes !== null ? `사다리 (${votes}/${totalMembers ?? '-'})` : '사다리 참여'}
+              </button>
+            )}
           </div>
         </div>
       </div>
