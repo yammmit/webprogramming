@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,69 +13,159 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// User
+//
 model User {
-  id        Int      @id @default(autoincrement())
-  uid       String   @unique               // Firebase UID
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user_id                 Int              @id @default(autoincrement())
+  user_email              String           @unique
+  user_name               String?
+  user_password           String
+  user_created_at         DateTime         @default(now())
+  user_password_updated_at DateTime?        
 
-  groups    GroupMember[]
-  tasks     Task[]       @relation("UserTasks")
-
-  // 🔥 추가: 사용자가 owner인 그룹들
-  ownedGroups Group[]
+  groupsOwned             Group[]          @relation("GroupOwner")
+  groupMembers            GroupMember[]
+  invitationsReceived     Invitation[]     @relation("InvitationToUser")
+  invitationsSent         Invitation[]     @relation("InvitationFromUser")
+  taskAssignments         TaskAssignment[] @relation("AssignmentToUser")
+  taskCompletions         TaskCompletion[] @relation("CompletionByUser")
+  evaluations             TaskEvaluation[] @relation("EvaluationByUser")
 }
 
+//
+// Group
+//
 model Group {
-  id        Int      @id @default(autoincrement())
-  name      String
-  ownerId   Int
-  createdAt DateTime @default(now())
+  group_id       Int             @id @default(autoincrement())
+  group_name     String
+  group_created_at DateTime      @default(now())
 
-  owner     User         @relation(fields: [ownerId], references: [id])
-  members   GroupMember[]
-  tasks     Task[]
+  owner_id       Int
+  owner          User            @relation("GroupOwner", fields: [owner_id], references: [user_id])
 
-  // 🔥 추가: 초대 테이블과의 반대 필드
-  invitations Invitation[]
+  members        GroupMember[]
+  invitations    Invitation[]
+  tasks          Task[]
 }
 
+//
+// GroupMember (Many-to-Many between Group & User)
+//
 model GroupMember {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  groupId   Int
-  role      String   @default("member")
-  joinedAt  DateTime @default(now())
+  group_id  Int
+  user_id   Int
+  role      String      // 'owner' | 'member'
+  joined_at DateTime @default(now())
 
-  user      User   @relation(fields: [userId], references: [id])
-  group     Group  @relation(fields: [groupId], references: [id])
+  group     Group   @relation(fields: [group_id], references: [group_id])
+  user      User    @relation(fields: [user_id], references: [user_id])
 
-  @@unique([userId, groupId])
+  @@id([group_id, user_id])
 }
 
-model Task {
-  id          Int      @id @default(autoincrement())
-  groupId     Int
-  assignedTo  Int?
-  title       String
-  description String?
-  isDone      Boolean  @default(false)
-  dueDate     DateTime?
-  createdAt   DateTime @default(now())
-
-  group       Group    @relation(fields: [groupId], references: [id])
-  assignee    User?    @relation("UserTasks", fields: [assignedTo], references: [id])
-}
-
+//
+// Invitation (초대 시스템)
+//
 model Invitation {
-  id        Int      @id @default(autoincrement())
-  groupId   Int
-  email     String
-  token     String   @unique
-  createdAt DateTime @default(now())
-  used      Boolean  @default(false)
+  invitation_id  Int      @id @default(autoincrement())
+  group_id       Int
+  invited_user_id Int
+  invited_by     Int
+  status         String   // 'pending' | 'accepted'
+  created_at     DateTime @default(now())
 
-  group     Group    @relation(fields: [groupId], references: [id])
+  group       Group @relation(fields: [group_id], references: [group_id])
+  invitedUser User  @relation("InvitationToUser", fields: [invited_user_id], references: [user_id])
+  inviter     User  @relation("InvitationFromUser", fields: [invited_by], references: [user_id])
+}
+
+//
+// Task (집안일 템플릿)
+//
+model Task {
+  task_id        Int       @id @default(autoincrement())
+  group_id       Int
+  title          String
+  description    String?
+  difficulty     Int
+  frequency_type String    // enum-like: 'daily', 'weekly', etc.
+  weekday_mask   Int?      // 비트마스크
+  created_at     DateTime @default(now())
+
+  group       Group          @relation(fields: [group_id], references: [group_id])
+  assignments TaskAssignment[]
+}
+
+//
+// TaskAssignment (집안일 배정)
+//
+model TaskAssignment {
+  task_assignment_id Int       @id @default(autoincrement())
+  task_id            Int
+  assigned_to        Int?      // nullable = 랜덤 배정 가능
+  assignment_type    String?   // 'random' | 'self-request'
+  status             String    // 'assigned' | 'completed'
+  created_at         DateTime  @default(now())
+
+  task        Task   @relation(fields: [task_id], references: [task_id])
+  assignedTo  User?  @relation("AssignmentToUser", fields: [assigned_to], references: [user_id])
+  completion  TaskCompletion?
+  evaluations TaskEvaluation[]
+}
+
+//
+// TaskCompletion (집안일 완료 기록)
+//
+model TaskCompletion {
+  task_completion_id Int      @id @default(autoincrement())
+  assignment_id      Int      @unique
+  completed_at       DateTime @default(now())
+  completed_by       Int
+
+  assignment   TaskAssignment @relation(fields: [assignment_id], references: [task_assignment_id])
+  completedBy  User           @relation("CompletionByUser", fields: [completed_by], references: [user_id])
+}
+
+//
+// TaskEvaluation (평가)
+//
+model TaskEvaluation {
+  task_evaluation_id Int       @id @default(autoincrement())
+  assignment_id      Int
+  evaluator_id       Int
+  rating             Int
+  comment            String?
+  is_anonymous       Boolean
+  created_at         DateTime @default(now())
+
+  assignment TaskAssignment @relation(fields: [assignment_id], references: [task_assignment_id])
+  evaluator  User           @relation("EvaluationByUser", fields: [evaluator_id], references: [user_id])
+
+  @@unique([assignment_id, evaluator_id])
+}
+
+model LadderVote {
+  ladder_vote_id Int      @id @default(autoincrement())
+  task_id        Int
+  user_id        Int
+  vote           Boolean  @default(true)
+  created_at     DateTime @default(now())
+
+  @@unique([task_id, user_id])
+  @@index([task_id])
+}
+
+model LadderResult {
+  ladder_id    Int      @id @default(autoincrement())
+  task_id      Int
+  group_id     Int
+  participants Json
+  ladder_map   Json
+  result_map   Json
+  bottom_result Json
+  assigned_to  Int
+  created_at   DateTime @default(now())
+
+  @@index([task_id])
 }

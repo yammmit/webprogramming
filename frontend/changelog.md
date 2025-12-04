@@ -1,0 +1,5 @@
+### NOV 27 ( MAIN )
+
+### NOV 28 (CHORES)
+
+### NOV 29 (SETTINGS)
