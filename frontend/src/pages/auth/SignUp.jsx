@@ -36,8 +36,14 @@ export default function SignUp() {
       setTimeout(() => navigate('/login'), 1000);
     } catch (err) {
       console.error(err);
-      if (err.response?.data) {
-        setError(err.response.data.error || err.response.data.message || "회원가입에 실패했습니다.");
+      const resp = err.response?.data;
+      const status = err.response?.status;
+
+      // map backend "email already" responses to a Korean message
+      if (status === 409 || (resp && ((String(resp.message || '').toLowerCase().includes('email already')) || (String(resp.error || '').toLowerCase().includes('email already'))))) {
+        setError('이미 존재하는 이메일 입니다');
+      } else if (resp) {
+        setError(resp.error || resp.message || "회원가입에 실패했습니다.");
       } else {
         setError(err.message || "회원가입에 실패했습니다.");
       }
