@@ -5,7 +5,7 @@ import { fetchTasksByGroup } from "../../api/tasks";
 import character from "../../assets/images/splash-character.png";
 import Vcharacter from "../../assets/images/Vaccum_Character.png";
 import StarRating from "../../components/ui/StarRating";
-import { db } from '../../mocks/db';
+import { fetchUsersByIds } from '../../api/users';
 
 import MainLayout from "../../components/layout/MainLayout";
 import Card from "../../components/ui/Card";
@@ -16,8 +16,30 @@ export default function Dashboard() {
   const { groupId } = useParams();
   const [group, setGroup] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [assignedNames, setAssignedNames] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('unassigned');
+
+  // keep assignedNames in sync when tasks change
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAssignedNames() {
+      try {
+        const ids = Array.from(new Set((tasks || [])
+          .filter(t => t.assigned_to != null)
+          .map(t => Number(t.assigned_to)).filter(n => !Number.isNaN(n))));
+        if (ids.length === 0) { if (!cancelled) setAssignedNames({}); return; }
+        const users = await fetchUsersByIds(ids);
+        const map = {};
+        users.forEach(u => { map[u.user_id] = u.user_name || u.name || String(u.user_id); });
+        if (!cancelled) setAssignedNames(map);
+      } catch (e) {
+        console.warn('Failed to load assigned user names', e?.message || e);
+      }
+    }
+    loadAssignedNames();
+    return () => { cancelled = true; };
+  }, [tasks]);
 
   // Resolve logged-in user's name robustly from localStorage or group data
   let storedUser = null;
@@ -139,20 +161,12 @@ export default function Dashboard() {
       // exclude tasks assigned to me
       if (String(t.assigned_to) === me) return false;
 
-      // check reviews stored in global db.reviews or on the task object, tolerant to key names
-      const hasReviewedInDb = Array.isArray(db.reviews) && db.reviews.some((r) => {
-        const ridTask = String(r.task_id ?? r.taskId ?? r.taskId ?? '');
-        const ridUser = String(r.user_id ?? r.userId ?? r.user ?? '');
-        const tid = String(t.task_id ?? t.taskId ?? t.id ?? '');
-        return ridTask === tid && ridUser === me;
-      });
-
+      // check reviews stored on the task object (backend-provided)
       const hasReviewedOnTask = Array.isArray(t.reviews) && t.reviews.some((r) => {
         const ridUser = String(r.user_id ?? r.userId ?? r.user ?? '');
         return ridUser === me;
       });
-
-      return !(hasReviewedInDb || hasReviewedOnTask);
+      return !hasReviewedOnTask;
     });
   } else {
     // cannot determine current user -> no reviewable items
@@ -220,7 +234,7 @@ export default function Dashboard() {
                 미배정된 집안일이 없어요
               </div>
             ) : (
-              <HorizontalTaskRow tasks={unassigned} />
+              <HorizontalTaskRow tasks={unassigned} assignedNames={assignedNames} />
             )
           )}
 
@@ -230,7 +244,7 @@ export default function Dashboard() {
                 배정된 집안일이 없어요
               </div>
             ) : (
-              <HorizontalTaskRow tasks={inProgress} />
+              <HorizontalTaskRow tasks={inProgress} assignedNames={assignedNames} />
             )
           )}
 
@@ -240,7 +254,7 @@ export default function Dashboard() {
                 평가할 항목이 없습니다
               </div>
             ) : (
-              <HorizontalTaskRow tasks={toReview} cardBase={'/chores/review'} />
+              <HorizontalTaskRow tasks={toReview} cardBase={'/chores/review'} assignedNames={assignedNames} />
             )
           )}
         </section>
@@ -374,7 +388,7 @@ function TaskList({ tasks }) {
 }
 
 // Horizontal row for in-progress tasks
-function HorizontalTaskRow({ tasks, cardBase = '/main/assigned-request' }) {
+function HorizontalTaskRow({ tasks, cardBase = '/main/assigned-request', assignedNames = {} }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
       {tasks.map((task) => (
@@ -409,7 +423,7 @@ function HorizontalTaskRow({ tasks, cardBase = '/main/assigned-request' }) {
                     <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#111' }}>{task.title}</div>
                     {task.assigned_to != null && (
                       <div style={{ fontSize: 12, color: '#666', marginTop: 6, textAlign: 'center' }}>
-                        {(() => { const u = db.users.find(x => x.user_id === task.assigned_to); return u ? u.user_name : '알수없음'; })()}
+                        {assignedNames[task.assigned_to] || (task.assignedTo?.user_name || task.assignedTo?.name) || String(task.assigned_to) || '알수없음'}
                       </div>
                     )}
                  </div>
@@ -445,7 +459,7 @@ function HorizontalTaskRow({ tasks, cardBase = '/main/assigned-request' }) {
                    <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#111' }}>{task.title}</div>
                    {task.assigned_to != null && (
                      <div style={{ fontSize: 12, color: '#666', marginTop: 6, textAlign: 'center' }}>
-                       {(() => { const u = db.users.find(x => x.user_id === task.assigned_to); return u ? u.user_name : '알수없음'; })()}
+                       {assignedNames[task.assigned_to] || (task.assignedTo?.user_name || task.assignedTo?.name) || String(task.assigned_to) || '알수없음'}
                      </div>
                    )}
                  </div>

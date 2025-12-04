@@ -23,8 +23,8 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      // Call backend signup with email/password
-      const res = await api.post("/auth/signup", { email, password, name }, { baseURL: "http://localhost:3000" });
+      // Call backend signup with email/password (uses shared axios instance)
+      const res = await api.post("/auth/signup", { email, password, name });
       const token = res.data.token;
       const user = res.data.user;
 

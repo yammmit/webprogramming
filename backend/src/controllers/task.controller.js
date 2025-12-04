@@ -348,3 +348,72 @@ export const getGroupHistory = async (req, res) => {
     return res.status(500).json({ error: 'Failed to load group history' });
   }
 };
+
+// Get task detail with assigned user info
+export const getTaskDetail = async (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const task = await prisma.task.findUnique({
+      where: { task_id: taskId },
+      include: { assignments: { orderBy: { created_at: 'desc' }, take: 10 } }
+    });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    // normalize assignedTo.user_name for each assignment if present
+    if (Array.isArray(task.assignments) && task.assignments.length > 0) {
+      for (let i = 0; i < task.assignments.length; i++) {
+        const a = task.assignments[i];
+        if (a.assigned_to) {
+          try {
+            const u = await prisma.user.findUnique({ where: { user_id: Number(a.assigned_to) } });
+            if (u) {
+              // attach sanitized assignedTo object for client convenience
+              task.assignments[i].assignedTo = { user_id: u.user_id, user_name: u.user_name ?? u.name };
+            }
+          } catch (e) { }
+        }
+      }
+    }
+
+    return res.json({ task });
+  } catch (err) {
+    console.error('getTaskDetail error', err);
+    return res.status(500).json({ error: 'Failed to get task' });
+  }
+};
+
+// Get tasks by group with assigned user info
+export const getTasksByGroup = async (req, res) => {
+  try {
+    const groupId = Number(req.params.groupId);
+    const tasks = await prisma.task.findMany({ where: { group_id: groupId }, include: { assignments: { orderBy: { created_at: 'desc' }, take: 1 } } });
+
+    // normalize assignment.assignedTo for each task
+    const userIdsToLoad = new Set();
+    tasks.forEach(t => {
+      if (Array.isArray(t.assignments) && t.assignments.length > 0) {
+        const a = t.assignments[0];
+        if (a && a.assigned_to) userIdsToLoad.add(Number(a.assigned_to));
+      }
+    });
+    const userIds = Array.from(userIdsToLoad).filter(n => !Number.isNaN(n));
+    let users = [];
+    if (userIds.length) users = await prisma.user.findMany({ where: { user_id: { in: userIds } } });
+    const userMap = {};
+    users.forEach(u => { userMap[u.user_id] = u; });
+
+    const out = tasks.map(t => {
+      const ta = Array.isArray(t.assignments) && t.assignments.length ? t.assignments[0] : null;
+      if (ta && ta.assigned_to) {
+        const u = userMap[Number(ta.assigned_to)];
+        if (u) ta.assignedTo = { user_id: u.user_id, user_name: u.user_name ?? u.name };
+      }
+      return t;
+    });
+
+    return res.json(out);
+  } catch (err) {
+    console.error('getTasksByGroup error', err);
+    return res.status(500).json({ error: 'Failed to get tasks' });
+  }
+};

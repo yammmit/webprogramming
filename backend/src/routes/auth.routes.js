@@ -10,6 +10,37 @@ const router = express.Router();
 // POST /auth/signup
 router.post("/signup", async (req, res) => {
   try {
+    // Support two modes:
+    // 1) idToken mode: { idToken }
+    // 2) email/password mode: { email, password, name }
+    if (req.body?.idToken) {
+      const { idToken } = req.body;
+      // verify incoming token using server JWT secret
+      let decoded;
+      try {
+        decoded = jwt.verify(idToken, process.env.JWT_SECRET || 'dev_jwt_secret');
+      } catch (e) {
+        console.error('idToken verify failed:', e?.message || e);
+        return res.status(401).json({ error: 'Invalid idToken' });
+      }
+
+      const email = decoded.email || null;
+      const nameFromToken = decoded.name || decoded.displayName || null;
+      if (!email) return res.status(400).json({ error: 'No email in token' });
+
+      // upsert user by email
+      const user = await prisma.user.upsert({
+        where: { user_email: email },
+        update: { user_name: nameFromToken || undefined, user_password_updated_at: new Date() },
+        create: { user_email: email, user_name: nameFromToken || null, user_password: '' },
+      });
+
+      const payload = { sub: user.user_id, email: user.user_email };
+      const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', { expiresIn: '7d' });
+      const safeUser = { ...user }; delete safeUser.user_password;
+      return res.json({ token, user: safeUser });
+    }
+
     const { email, password, name } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: "email and password required" });
 
