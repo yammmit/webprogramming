@@ -11,6 +11,7 @@ import groupRouter from "./routes/group.routes.js";
 import taskRouter from './routes/task.routes.js';
 import invitationRouter from './routes/invitation.routes.js';
 
+
 const app = express();
 const prisma = new PrismaClient();
 
